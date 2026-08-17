@@ -176,21 +176,28 @@ O pipeline de categorização e análise opera em **5 camadas sequenciais**:
 
 ---
 
-## 10. Variáveis de Ambiente
+## 10. Variáveis de Ambiente e Secrets
 
-Crie um arquivo `.env` na raiz do projeto com base no `.env.example`:
+Crie um arquivo `.env` na raiz do projeto com base no `.env.example` ou configure os Secrets no Google AI Studio / ambiente de produção:
 
 ```env
-# Gemini AI (Server-side)
-GEMINI_API_KEY=
-
-# Lunch Money API (Server-side)
-LUNCH_MONEY_API_KEY=
-
-# Sessão e Criptografia
+# 1. Autenticação e Credenciais (Obrigatórios Server-side)
+CONSULTANT_EMAIL=
+CONSULTANT_PASSWORD=
+CLIENT_EMAIL=
+CLIENT_PASSWORD=
 SESSION_SECRET=
 
-# Configurações do Servidor
+# 2. Integração Bancária - Lunch Money API v2 (Obrigatório para sincronização real)
+LUNCH_MONEY_API_KEY=
+
+# 3. Inteligência Artificial - Gemini 3.7 (Obrigatório para categorização e chat com IA)
+GEMINI_API_KEY=
+
+# 4. Provedores Opcionais / Futuros (NÃO obrigatório nesta etapa)
+# OPENAI_API_KEY=
+
+# 5. Configurações de Execução e Servidor
 APP_URL=http://localhost:3000
 NODE_ENV=development
 PORT=3000

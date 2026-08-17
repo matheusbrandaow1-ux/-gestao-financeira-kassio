@@ -32,6 +32,9 @@ export interface PublicLunchMoneyIntegration {
 const DATA_DIR = path.resolve(process.cwd(), '.data');
 const DATA_FILE = path.join(DATA_DIR, 'lunchmoney_integrations.json');
 
+// In-memory mirror cache
+const memoryStore: Record<string, LunchMoneyIntegrationRecord> = {};
+
 function ensureDataFile() {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -41,26 +44,31 @@ function ensureDataFile() {
       fs.writeFileSync(DATA_FILE, JSON.stringify({}, null, 2), 'utf-8');
     }
   } catch (err) {
-    console.error('Error ensuring data directory for integrations:', err);
+    // Non-fatal, memory store will serve as fallback
   }
 }
 
 function loadAllIntegrations(): Record<string, LunchMoneyIntegrationRecord> {
   ensureDataFile();
   try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-    return JSON.parse(raw);
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      return { ...memoryStore, ...parsed };
+    }
   } catch {
-    return {};
+    // Return in-memory fallback
   }
+  return { ...memoryStore };
 }
 
 function saveAllIntegrations(data: Record<string, LunchMoneyIntegrationRecord>) {
+  Object.assign(memoryStore, data);
   ensureDataFile();
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    console.error('Error saving integrations data:', err);
+    // Memory store holds data
   }
 }
 

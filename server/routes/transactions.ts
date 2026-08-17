@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { requireAuth } from './auth';
+import { requireAuth, resolveAuthorizedClientId } from './auth';
 
 const router = Router();
 
@@ -18,8 +18,7 @@ const categorizationOverrides = new Map<string, CategoryOverride>();
 
 // 1. POST /api/transactions/categorize - Safe Recategorization (ReadOnly to Lunch Money)
 router.post('/categorize', requireAuth, (req: Request, res: Response) => {
-  const sessionUser = (req as any).user;
-  const { transactionId, categoryId, categoryName, subcategoryName } = req.body || {};
+  const { transactionId, categoryId, categoryName, subcategoryName, clientId } = req.body || {};
 
   if (!transactionId || typeof transactionId !== 'string') {
     return res.status(400).json({
@@ -28,17 +27,17 @@ router.post('/categorize', requireAuth, (req: Request, res: Response) => {
     });
   }
 
-  // Determine target client ID based on authenticated role (Strict isolation)
-  let targetClientId = 'kassio-pf';
-  if (sessionUser.role === 'CLIENT') {
-    targetClientId = sessionUser.clientId || 'kassio-pf';
-  } else if (req.body.clientId && typeof req.body.clientId === 'string') {
-    targetClientId = req.body.clientId;
+  const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, clientId);
+  if (!isAllowed) {
+    return res.status(403).json({
+      success: false,
+      message: 'Acesso não autorizado para categorizar transações deste cliente.'
+    });
   }
 
-  const key = `${targetClientId}_${transactionId}`;
+  const key = `${authorizedClientId}_${transactionId}`;
   const override: CategoryOverride = {
-    clientId: targetClientId,
+    clientId: authorizedClientId,
     transactionId,
     categoryId: categoryId || '',
     categoryName: categoryName || '',
@@ -57,25 +56,24 @@ router.post('/categorize', requireAuth, (req: Request, res: Response) => {
 
 // 2. GET /api/transactions/overrides - Get all overrides for client
 router.get('/overrides', requireAuth, (req: Request, res: Response) => {
-  const sessionUser = (req as any).user;
-  let targetClientId = 'kassio-pf';
-
-  if (sessionUser.role === 'CLIENT') {
-    targetClientId = sessionUser.clientId || 'kassio-pf';
-  } else if (req.query.clientId && typeof req.query.clientId === 'string') {
-    targetClientId = req.query.clientId;
+  const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, req.query.clientId as string);
+  if (!isAllowed) {
+    return res.status(403).json({
+      success: false,
+      message: 'Acesso não autorizado para consultar overrides deste cliente.'
+    });
   }
 
   const list: CategoryOverride[] = [];
   for (const [key, val] of categorizationOverrides.entries()) {
-    if (key.startsWith(`${targetClientId}_`)) {
+    if (key.startsWith(`${authorizedClientId}_`)) {
       list.push(val);
     }
   }
 
   return res.json({
     success: true,
-    clientId: targetClientId,
+    clientId: authorizedClientId,
     overrides: list
   });
 });

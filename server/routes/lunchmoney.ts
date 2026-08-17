@@ -3,55 +3,37 @@ import { LunchMoneyClient } from '../integrations/lunchmoney/client';
 import { LunchMoneySyncService } from '../integrations/lunchmoney/sync';
 import { lunchMoneyCache } from '../integrations/lunchmoney/cache';
 import { LunchMoneyIntegrationStore } from '../integrations/lunchmoney/store';
-import { getSessionFromRequest } from './auth';
+import { requireAuth, requireConsultant, resolveAuthorizedClientId } from './auth';
 
 const router = Router();
 
-// Middleware/helper to check consultant or admin role strictly
-function checkConsultantOrAdmin(req: Request, res: Response): boolean {
-  const session = getSessionFromRequest(req);
-  if (session && session.role === 'CLIENT') {
-    res.status(403).json({
-      success: false,
-      code: 'FORBIDDEN',
-      message: 'Acesso restrito ao consultor financeiro. O cliente não tem permissão para gerenciar integrações ou tokens.'
-    });
-    return false;
-  }
-
-  const userRole = (req.body?.userRole || req.headers['x-user-role'] || (session ? session.role : 'CONSULTANT')) as string;
-  if (userRole === 'CLIENT') {
-    res.status(403).json({
-      success: false,
-      code: 'FORBIDDEN',
-      message: 'Apenas consultores e administradores podem gerenciar integrações e tokens de API.'
-    });
-    return false;
-  }
-  return true;
-}
-
 // 1. Get current public integration details for a client (No raw token is ever returned)
-router.get('/integration', (req: Request, res: Response) => {
-  const clientId = (req.query.clientId as string) || 'kassio-pf';
-  const integration = LunchMoneyIntegrationStore.getPublicIntegration(clientId);
+router.get('/integration', requireAuth, (req: Request, res: Response) => {
+  const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, req.query.clientId as string);
+  if (!isAllowed) {
+    return res.status(403).json({
+      success: false,
+      code: 'FORBIDDEN',
+      message: 'Acesso não autorizado aos dados deste cliente.'
+    });
+  }
+
+  const integration = LunchMoneyIntegrationStore.getPublicIntegration(authorizedClientId);
 
   return res.json({
     success: true,
-    clientId,
+    clientId: authorizedClientId,
     integration: integration || {
-      clientId,
+      clientId: authorizedClientId,
       status: 'DISCONNECTED',
       message: 'Nenhuma integração ativa configurada para este cliente.'
     }
   });
 });
 
-// 2. Test a raw token before connecting (Transient validation via GET /v2/me)
-router.post('/test-token', async (req: Request, res: Response) => {
-  if (!checkConsultantOrAdmin(req, res)) return;
-
-  const { token } = req.body;
+// 2. Test a raw token before connecting (Transient validation via GET /v2/me) - STRICTLY CONSULTANT ONLY
+router.post('/test-token', requireConsultant, async (req: Request, res: Response) => {
+  const { token } = req.body || {};
   if (!token || typeof token !== 'string' || token.trim() === '') {
     return res.status(400).json({
       success: false,
@@ -86,11 +68,9 @@ router.post('/test-token', async (req: Request, res: Response) => {
   }
 });
 
-// 3. Connect/Save Lunch Money token for a client
-router.post('/connect', async (req: Request, res: Response) => {
-  if (!checkConsultantOrAdmin(req, res)) return;
-
-  const { clientId, token } = req.body;
+// 3. Connect/Save Lunch Money token for a client - STRICTLY CONSULTANT ONLY
+router.post('/connect', requireConsultant, async (req: Request, res: Response) => {
+  const { clientId, token } = req.body || {};
   const targetClientId = clientId || 'kassio-pf';
 
   if (!token || typeof token !== 'string' || token.trim() === '') {
@@ -144,11 +124,9 @@ router.post('/connect', async (req: Request, res: Response) => {
   }
 });
 
-// 4. Disconnect Lunch Money for a client
-router.post('/disconnect', (req: Request, res: Response) => {
-  if (!checkConsultantOrAdmin(req, res)) return;
-
-  const { clientId } = req.body;
+// 4. Disconnect Lunch Money for a client - STRICTLY CONSULTANT ONLY
+router.post('/disconnect', requireConsultant, (req: Request, res: Response) => {
+  const { clientId } = req.body || {};
   const targetClientId = clientId || 'kassio-pf';
 
   LunchMoneyIntegrationStore.disconnectIntegration(targetClientId);
@@ -161,16 +139,24 @@ router.post('/disconnect', (req: Request, res: Response) => {
 });
 
 // 5. GET /api/lunchmoney/me (Check active connection for client)
-router.get('/me', async (req: Request, res: Response) => {
-  const clientId = (req.query.clientId as string) || 'kassio-pf';
-  const token = LunchMoneyIntegrationStore.getTokenForClient(clientId);
+router.get('/me', requireAuth, async (req: Request, res: Response) => {
+  const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, req.query.clientId as string);
+  if (!isAllowed) {
+    return res.status(403).json({
+      success: false,
+      code: 'FORBIDDEN',
+      message: 'Acesso não autorizado aos dados deste cliente.'
+    });
+  }
+
+  const token = LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId);
 
   if (!token) {
     return res.status(401).json({
       success: false,
       status: 'NOT_CONFIGURED',
       code: 'AUTH_NOT_CONFIGURED',
-      message: `Lunch Money não conectado para o cliente ${clientId}. Clique em "Conectar Lunch Money" para configurar o Access Token.`,
+      message: `Lunch Money não conectado para o cliente ${authorizedClientId}.`,
       user: null
     });
   }
@@ -187,8 +173,8 @@ router.get('/me', async (req: Request, res: Response) => {
       accountId: user.account_id
     };
 
-    LunchMoneyIntegrationStore.updateValidationTimestamp(clientId, userMeta);
-    const publicIntegration = LunchMoneyIntegrationStore.getPublicIntegration(clientId);
+    LunchMoneyIntegrationStore.updateValidationTimestamp(authorizedClientId, userMeta);
+    const publicIntegration = LunchMoneyIntegrationStore.getPublicIntegration(authorizedClientId);
 
     return res.json({
       success: true,
@@ -210,15 +196,23 @@ router.get('/me', async (req: Request, res: Response) => {
 });
 
 // 6. Test status endpoint
-router.get('/status', async (req: Request, res: Response) => {
-  const clientId = (req.query.clientId as string) || 'kassio-pf';
-  const token = LunchMoneyIntegrationStore.getTokenForClient(clientId);
+router.get('/status', requireAuth, async (req: Request, res: Response) => {
+  const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, req.query.clientId as string);
+  if (!isAllowed) {
+    return res.status(403).json({
+      success: false,
+      code: 'FORBIDDEN',
+      message: 'Acesso não autorizado aos dados deste cliente.'
+    });
+  }
+
+  const token = LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId);
 
   if (!token) {
     return res.json({
       configured: false,
       status: 'NOT_CONFIGURED',
-      message: `Lunch Money não configurado para o cliente ${clientId}.`,
+      message: `Lunch Money não configurado para o cliente ${authorizedClientId}.`,
       user: null
     });
   }
@@ -248,7 +242,7 @@ router.get('/status', async (req: Request, res: Response) => {
 });
 
 // 7. Trigger Idempotent Sync for a client
-router.post('/sync', async (req: Request, res: Response) => {
+router.post('/sync', requireAuth, async (req: Request, res: Response) => {
   const { 
     clientId, 
     startDate, 
@@ -258,22 +252,30 @@ router.post('/sync', async (req: Request, res: Response) => {
     existingCategories, 
     existingTags, 
     existingRecurring 
-  } = req.body;
+  } = req.body || {};
   
-  const targetClientId = clientId || 'kassio-pf';
-  const token = LunchMoneyIntegrationStore.getTokenForClient(targetClientId);
+  const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, clientId);
+  if (!isAllowed) {
+    return res.status(403).json({
+      success: false,
+      code: 'FORBIDDEN',
+      message: 'Acesso não autorizado para sincronizar este cliente.'
+    });
+  }
+
+  const token = LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId);
 
   if (!token) {
     return res.status(401).json({
       success: false,
       code: 'AUTH_REQUIRED',
-      message: `Lunch Money não conectado para o cliente ${targetClientId}. Por favor, conecte a integração primeiro.`
+      message: `Lunch Money não conectado para o cliente ${authorizedClientId}. Por favor, conecte a integração primeiro.`
     });
   }
 
   try {
     const syncService = new LunchMoneySyncService(token);
-    const result = await syncService.runSync(targetClientId, {
+    const result = await syncService.runSync(authorizedClientId, {
       startDate,
       updatedSince,
       existingTransactions,
@@ -300,9 +302,9 @@ router.post('/sync', async (req: Request, res: Response) => {
   }
 });
 
-// 8. Clear cache endpoint
-router.post('/cache/clear', (req: Request, res: Response) => {
-  const { clientId } = req.body;
+// 8. Clear cache endpoint - STRICTLY CONSULTANT ONLY
+router.post('/cache/clear', requireConsultant, (req: Request, res: Response) => {
+  const { clientId } = req.body || {};
   lunchMoneyCache.clear(clientId || 'kassio-pf');
   return res.json({ success: true, message: 'Cache limpo com sucesso.' });
 });

@@ -4,39 +4,82 @@ import crypto from 'crypto';
 const router = Router();
 
 // Server-side secret for HMAC session signing
-const SESSION_SECRET = process.env.SESSION_SECRET || 'wealth-planning-auth-session-key-prod-2026';
+// STRICT REQUIREMENT: Must be explicitly provided via process.env.SESSION_SECRET.
+// Zero fallbacks, zero hardcoded defaults, zero auto-generation. Fail closed if absent.
+function getRequiredSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || typeof secret !== 'string' || !secret.trim()) {
+    throw new Error('SESSION_SECRET_MISSING');
+  }
+  return secret.trim();
+}
 
-// 1. EXACT PREDEFINED USERS (SERVER-SIDE ONLY - NEVER EXPOSED TO CLIENT)
+// 1. DYNAMIC PREDEFINED USERS (SERVER-SIDE ONLY - NEVER EXPOSED TO CLIENT)
 interface InternalUser {
   id: string;
   email: string;
-  passwordHashOrPlain: string;
+  passwordSecret: string;
   role: 'CONSULTANT' | 'CLIENT';
   name: string;
   displayName: string;
   clientId: string | null;
 }
 
-const PREDEFINED_USERS: InternalUser[] = [
-  {
-    id: 'user-consultant-matheus',
-    email: 'matheusbrandao.w1@gmail.com',
-    passwordHashOrPlain: 'Matheus177@',
-    role: 'CONSULTANT',
-    name: 'Matheus Brandão',
-    displayName: 'Matheus Brandão',
-    clientId: null
-  },
-  {
-    id: 'user-client-kassio',
-    email: 'kassiotavares@icloud.com',
-    passwordHashOrPlain: 'KassioTw1',
-    role: 'CLIENT',
-    name: 'Kássio',
-    displayName: 'Kássio',
-    clientId: 'kassio-pf'
+function getPredefinedUsers(): InternalUser[] {
+  const consultantEmail = (process.env.CONSULTANT_EMAIL || 'matheusbrandao.w1@gmail.com').trim().toLowerCase();
+  const consultantPassword = process.env.CONSULTANT_PASSWORD || '';
+
+  const configuredClientEmail = process.env.CLIENT_EMAIL ? process.env.CLIENT_EMAIL.trim().toLowerCase() : '';
+  const clientPassword = process.env.CLIENT_PASSWORD || '';
+
+  const users: InternalUser[] = [
+    {
+      id: 'user-consultant-matheus',
+      email: consultantEmail,
+      passwordSecret: consultantPassword,
+      role: 'CONSULTANT',
+      name: 'Matheus Brandão',
+      displayName: 'Matheus Brandão',
+      clientId: null
+    }
+  ];
+
+  if (configuredClientEmail) {
+    users.push({
+      id: 'user-client-kassio',
+      email: configuredClientEmail,
+      passwordSecret: clientPassword,
+      role: 'CLIENT',
+      name: 'Kássio',
+      displayName: 'Kássio',
+      clientId: 'kassio-pf'
+    });
+  } else {
+    // Default acceptable client email handles if CLIENT_EMAIL secret not set yet
+    users.push(
+      {
+        id: 'user-client-kassio',
+        email: 'kassio.client@wealthplanning.com',
+        passwordSecret: clientPassword,
+        role: 'CLIENT',
+        name: 'Kássio',
+        displayName: 'Kássio',
+        clientId: 'kassio-pf'
+      },
+      {
+        id: 'user-client-kassio',
+        email: 'kassiotavares@icloud.com',
+        passwordSecret: clientPassword,
+        role: 'CLIENT',
+        name: 'Kássio',
+        displayName: 'Kássio',
+        clientId: 'kassio-pf'
+      }
+    );
   }
-];
+
+  return users;
+}
 
 export interface SessionPayload {
   id: string;
@@ -49,8 +92,9 @@ export interface SessionPayload {
   expiresAt: number;
 }
 
-// Token helpers
+// Token helpers (Strict fail-closed if SESSION_SECRET is missing)
 export function signSessionToken(payload: Omit<SessionPayload, 'issuedAt' | 'expiresAt'>): string {
+  const secret = getRequiredSessionSecret();
   const now = Date.now();
   const sessionData: SessionPayload = {
     ...payload,
@@ -58,7 +102,7 @@ export function signSessionToken(payload: Omit<SessionPayload, 'issuedAt' | 'exp
     expiresAt: now + (30 * 24 * 60 * 60 * 1000) // 30 days
   };
   const body = Buffer.from(JSON.stringify(sessionData)).toString('base64url');
-  const signature = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(body).digest('base64url');
   return `${body}.${signature}`;
 }
 
@@ -67,8 +111,16 @@ export function verifySessionToken(token: string): SessionPayload | null {
   const parts = token.split('.');
   if (parts.length !== 2) return null;
 
+  let secret: string;
+  try {
+    secret = getRequiredSessionSecret();
+  } catch {
+    // Fail-closed: Cannot verify any session without configured SESSION_SECRET
+    return null;
+  }
+
   const [body, signature] = parts;
-  const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url');
+  const expectedSig = crypto.createHmac('sha256', secret).update(body).digest('base64url');
   
   // Timing safe comparison to prevent timing attacks
   const sigBuf = Buffer.from(signature);
@@ -141,6 +193,37 @@ export function requireConsultant(req: Request, res: Response, next: () => void)
   next();
 }
 
+/**
+ * Validates and resolves the authorized clientId for the current request.
+ * CLIENT role can ONLY access their own assigned clientId ('kassio-pf').
+ * CONSULTANT role can access any requested client.
+ */
+export function resolveAuthorizedClientId(req: Request, requestedClientId?: string): { authorizedClientId: string; isAllowed: boolean } {
+  const session = getSessionFromRequest(req);
+  if (!session) {
+    return { authorizedClientId: 'kassio-pf', isAllowed: false };
+  }
+
+  if (session.role === 'CLIENT') {
+    const clientAssignedId = session.clientId || 'kassio-pf';
+    if (requestedClientId && requestedClientId !== clientAssignedId) {
+      return { authorizedClientId: clientAssignedId, isAllowed: false };
+    }
+    return { authorizedClientId: clientAssignedId, isAllowed: true };
+  }
+
+  // Consultant has access to requested or default client
+  return { authorizedClientId: requestedClientId || 'kassio-pf', isAllowed: true };
+}
+
+// Timing-safe password check using sha256 hashes
+function verifyPasswordSafe(inputPassword: string, storedSecret: string): boolean {
+  if (!storedSecret || !inputPassword) return false;
+  const hashA = crypto.createHash('sha256').update(inputPassword).digest();
+  const hashB = crypto.createHash('sha256').update(storedSecret).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
+
 // ==========================================
 // ROUTES
 // ==========================================
@@ -158,11 +241,12 @@ router.post('/login', (req: Request, res: Response) => {
   }
 
   const cleanEmail = email.trim().toLowerCase();
+  const users = getPredefinedUsers();
 
   // Find predefined user
-  const foundUser = PREDEFINED_USERS.find(u => u.email.toLowerCase() === cleanEmail);
+  const foundUser = users.find(u => u.email.toLowerCase() === cleanEmail);
 
-  if (!foundUser || foundUser.passwordHashOrPlain !== password) {
+  if (!foundUser) {
     return res.status(401).json({
       success: false,
       code: 'INVALID_CREDENTIALS',
@@ -170,15 +254,42 @@ router.post('/login', (req: Request, res: Response) => {
     });
   }
 
-  // Create session
-  const token = signSessionToken({
-    id: foundUser.id,
-    email: foundUser.email,
-    role: foundUser.role,
-    clientId: foundUser.clientId,
-    name: foundUser.name,
-    displayName: foundUser.displayName
-  });
+  // Check if server secrets are configured
+  if (!foundUser.passwordSecret) {
+    return res.status(500).json({
+      success: false,
+      code: 'SECRETS_NOT_CONFIGURED',
+      message: 'As credenciais deste usuário ainda não foram configuradas nas variáveis de ambiente do servidor (Secrets).'
+    });
+  }
+
+  const isValidPassword = verifyPasswordSafe(password, foundUser.passwordSecret);
+  if (!isValidPassword) {
+    return res.status(401).json({
+      success: false,
+      code: 'INVALID_CREDENTIALS',
+      message: 'Email ou senha inválidos.'
+    });
+  }
+
+  // Verify that SESSION_SECRET is configured before issuing token
+  let token: string;
+  try {
+    token = signSessionToken({
+      id: foundUser.id,
+      email: foundUser.email,
+      role: foundUser.role,
+      clientId: foundUser.clientId,
+      name: foundUser.name,
+      displayName: foundUser.displayName
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      code: 'SESSION_SECRET_NOT_CONFIGURED',
+      message: 'Erro de segurança do servidor: SESSION_SECRET não configurado nos Secrets.'
+    });
+  }
 
   // Set secure cookie
   const isProduction = process.env.NODE_ENV === 'production';

@@ -2,19 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
     // 1. Users collection
     match /users/{userId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
     }
 
     // 2. Consultant-Client Access Mapping
     match /consultantClientAccess/{accessId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
 
-    // 3. Clients top-level collection
+    // 3. Clients top-level collection and financial subcollections
     match /clients/{clientId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
 
       // Subcollections within a Client
       // Integrations subcollection: blocked from client-side direct reads/writes for maximum security
@@ -24,14 +34,13 @@ service cloud.firestore {
       }
 
       match /{subcollection}/{docId} {
-        allow read, write: if true;
+        allow read, write: if isAuthenticated();
       }
     }
 
     // 4. Audit logs
     match /auditLogs/{logId} {
-      allow read, write: if true;
+      allow read, write: if isAuthenticated();
     }
   }
 }
-
