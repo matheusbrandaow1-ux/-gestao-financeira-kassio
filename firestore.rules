@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Users collection
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // 2. Consultant-Client Access Mapping
+    match /consultantClientAccess/{accessId} {
+      allow read, write: if true;
+    }
+
+    // 3. Clients top-level collection
+    match /clients/{clientId} {
+      allow read, write: if true;
+
+      // Subcollections within a Client
+      // Integrations subcollection: blocked from client-side direct reads/writes for maximum security
+      // (Tokens and raw integration credentials are ONLY accessed server-side via API routes)
+      match /integrations/{integrationId} {
+        allow read, write: if false;
+      }
+
+      match /{subcollection}/{docId} {
+        allow read, write: if true;
+      }
+    }
+
+    // 4. Audit logs
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+  }
+}
+

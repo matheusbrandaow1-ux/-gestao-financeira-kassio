@@ -1,0 +1,6 @@
+{
+  "name": "Gestão e Planejamento Financeiro",
+  "description": "Plataforma full-stack de wealth management e planejamento financeiro para consultores e clientes, com sincronização Lunch Money, objetivos, patrimônio, regras e dashboard em CHF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

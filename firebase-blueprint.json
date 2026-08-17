@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "clients": {
+      "title": "Client",
+      "description": "Financial planning client (Pessoa Física)",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "clientType": { "type": "string" },
+        "residenceCountry": { "type": "string" },
+        "baseCurrency": { "type": "string" },
+        "timezone": { "type": "string" },
+        "consultantId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "subcollections": {
+        "integrations": {
+          "title": "Integration",
+          "properties": {
+            "status": { "type": "string" },
+            "tokenLast4": { "type": "string" },
+            "connectedAt": { "type": "string" },
+            "lastValidatedAt": { "type": "string" },
+            "lunchMoneyUserId": { "type": "string" },
+            "lunchMoneyBudgetName": { "type": "string" },
+            "baseCurrency": { "type": "string" }
+          }
+        },
+        "accounts": {
+          "title": "Account",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "institution": { "type": "string" },
+            "type": { "type": "string" },
+            "currency": { "type": "string" },
+            "balance": { "type": "number" },
+            "isActive": { "type": "boolean" },
+            "provider": { "type": "string" },
+            "externalId": { "type": "string" }
+          }
+        },
+        "transactions": {
+          "title": "Transaction",
+          "properties": {
+            "id": { "type": "string" },
+            "clientId": { "type": "string" },
+            "provider": { "type": "string" },
+            "externalId": { "type": "string" },
+            "accountId": { "type": "string" },
+            "date": { "type": "string" },
+            "description": { "type": "string" },
+            "merchant": { "type": "string" },
+            "amount": { "type": "number" },
+            "currency": { "type": "string" },
+            "transactionType": { "type": "string" },
+            "categoryId": { "type": "string" },
+            "subcategoryId": { "type": "string" },
+            "notes": { "type": "string" },
+            "reviewStatus": { "type": "string" },
+            "isRecurring": { "type": "boolean" },
+            "tags": { "type": "array" },
+            "createdAt": { "type": "string" },
+            "updatedAt": { "type": "string" },
+            "lastSyncedAt": { "type": "string" }
+          }
+        },
+        "categories": {
+          "title": "Category",
+          "properties": {
+            "id": { "type": "string" },
+            "group": { "type": "string" },
+            "name": { "type": "string" },
+            "subcategories": { "type": "array" },
+            "type": { "type": "string" },
+            "color": { "type": "string" },
+            "icon": { "type": "string" }
+          }
+        },
+        "rules": {
+          "title": "Rule",
+          "properties": {
+            "id": { "type": "string" },
+            "priority": { "type": "number" },
+            "name": { "type": "string" },
+            "conditions": { "type": "array" },
+            "actions": { "type": "object" },
+            "isActive": { "type": "boolean" },
+            "matchCount": { "type": "number" }
+          }
+        },
+        "plans": {
+          "title": "MonthlyPlan",
+          "properties": {
+            "id": { "type": "string" },
+            "month": { "type": "string" },
+            "plannedIncome": { "type": "number" },
+            "plannedExpenses": { "type": "number" },
+            "plannedInvestments": { "type": "number" },
+            "categoryPlans": { "type": "object" },
+            "notes": { "type": "string" }
+          }
+        },
+        "goals": {
+          "title": "Goal",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string" },
+            "description": { "type": "string" },
+            "currency": { "type": "string" },
+            "targetAmount": { "type": "number" },
+            "currentAmount": { "type": "number" },
+            "startDate": { "type": "string" },
+            "targetDate": { "type": "string" },
+            "monthlyContribution": { "type": "number" },
+            "priority": { "type": "string" },
+            "status": { "type": "string" },
+            "trackingMethod": { "type": "string" },
+            "sourceAccountIds": { "type": "array" },
+            "sourceCategoryIds": { "type": "array" },
+            "sourceAssetIds": { "type": "array" }
+          }
+        },
+        "assets": {
+          "title": "Asset",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "category": { "type": "string" },
+            "classification": { "type": "string" },
+            "value": { "type": "number" },
+            "currency": { "type": "string" },
+            "institution": { "type": "string" },
+            "notes": { "type": "string" },
+            "updatedAt": { "type": "string" }
+          }
+        },
+        "recurringItems": {
+          "title": "RecurringItem",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "type": { "type": "string" },
+            "amount": { "type": "number" },
+            "currency": { "type": "string" },
+            "frequency": { "type": "string" },
+            "dayOfMonth": { "type": "number" },
+            "nextDueDate": { "type": "string" },
+            "status": { "type": "string" },
+            "accountId": { "type": "string" },
+            "categoryId": { "type": "string" },
+            "provider": { "type": "string" }
+          }
+        },
+        "pendingItems": {
+          "title": "PendingItem",
+          "properties": {
+            "id": { "type": "string" },
+            "type": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "severity": { "type": "string" },
+            "actionUrl": { "type": "string" },
+            "isResolved": { "type": "boolean" },
+            "createdAt": { "type": "string" }
+          }
+        },
+        "syncJobs": {
+          "title": "SyncJob",
+          "properties": {
+            "id": { "type": "string" },
+            "clientId": { "type": "string" },
+            "startedAt": { "type": "string" },
+            "finishedAt": { "type": "string" },
+            "status": { "type": "string" },
+            "created": { "type": "number" },
+            "updated": { "type": "number" },
+            "skipped": { "type": "number" },
+            "failed": { "type": "number" },
+            "errorSummary": { "type": "string" }
+          }
+        },
+        "auditLogs": {
+          "title": "AuditLog",
+          "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string" },
+            "clientId": { "type": "string" },
+            "action": { "type": "string" },
+            "entity": { "type": "string" },
+            "timestamp": { "type": "string" },
+            "source": { "type": "string" },
+            "details": { "type": "string" }
+          }
+        }
+      }
+    },
+    "users": {
+      "title": "UserProfile",
+      "description": "User profile with role-based access control",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "clientId": { "type": "string" },
+        "status": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "consultantClientAccess": {
+      "title": "ConsultantClientAccess",
+      "description": "Consultant access mappings to specific clients",
+      "properties": {
+        "id": { "type": "string" },
+        "consultantUid": { "type": "string" },
+        "clientId": { "type": "string" },
+        "role": { "type": "string" },
+        "grantedAt": { "type": "string" }
+      }
+    }
+  }
+}
