@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  CalendarRange, 
   Copy, 
   Plus, 
   TrendingUp, 
@@ -8,14 +7,19 @@ import {
   Check, 
   AlertTriangle, 
   Sparkles,
-  ChevronLeft,
-  ChevronRight,
   Save,
   PieChart
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { formatCurrency, formatPercent, calculateProgressPercent } from '../lib/money';
 import { MonthlyPlan } from '../types';
+import { MonthSelector } from '../components/common/MonthSelector';
+import { 
+  getAvailableMonths, 
+  getTransactionsForMonth, 
+  getNextMonth, 
+  formatMonthLabel 
+} from '../lib/monthUtils';
 
 export const PlanningView: React.FC = () => {
   const { 
@@ -27,16 +31,20 @@ export const PlanningView: React.FC = () => {
     duplicatePreviousMonthPlan 
   } = useClient();
 
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
+  const availableMonths = useMemo(() => {
+    return getAvailableMonths(transactions, 'desc');
+  }, [transactions]);
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => availableMonths[0] || '2026-08');
   const [isEditingTargets, setIsEditingTargets] = useState<boolean>(false);
   const [tempPlan, setTempPlan] = useState<MonthlyPlan>(monthlyPlan);
-  const [duplicateSuccess, setDuplicateSuccess] = useState<boolean>(false);
+  const [duplicateSuccessMsg, setDuplicateSuccessMsg] = useState<string | null>(null);
 
   const currency = activeClient.baseCurrency;
 
   // Realized calculations for the selected month
   const monthTransactions = useMemo(() => {
-    return transactions.filter(t => t.date.startsWith(selectedMonth));
+    return getTransactionsForMonth(transactions, selectedMonth);
   }, [transactions, selectedMonth]);
 
   const realizedIncome = useMemo(() => {
@@ -57,11 +65,11 @@ export const PlanningView: React.FC = () => {
       .reduce((sum, t) => sum + t.amount, 0);
   }, [monthTransactions]);
 
-  const plannedBalance = monthlyPlan.plannedIncome - monthlyPlan.plannedExpenses - monthlyPlan.plannedInvestments;
+  const plannedBalance = (monthlyPlan.plannedIncome || 0) - (monthlyPlan.plannedExpenses || 0) - (monthlyPlan.plannedInvestments || 0);
   const realizedBalance = realizedIncome - realizedExpenses - realizedInvestments;
 
-  const plannedSavingsRate = monthlyPlan.plannedIncome > 0 
-    ? (monthlyPlan.plannedIncome - monthlyPlan.plannedExpenses) / monthlyPlan.plannedIncome 
+  const plannedSavingsRate = (monthlyPlan.plannedIncome || 0) > 0 
+    ? ((monthlyPlan.plannedIncome || 0) - (monthlyPlan.plannedExpenses || 0)) / (monthlyPlan.plannedIncome || 1) 
     : 0;
 
   const realizedSavingsRate = realizedIncome > 0 
@@ -80,13 +88,13 @@ export const PlanningView: React.FC = () => {
   }, [monthTransactions]);
 
   const handleDuplicateMonth = async () => {
-    await duplicatePreviousMonthPlan('2026-09', '2026-08');
-    setDuplicateSuccess(true);
-    setTimeout(() => setDuplicateSuccess(false), 3000);
+    const nextMonth = getNextMonth(selectedMonth);
+    await duplicatePreviousMonthPlan(nextMonth, selectedMonth);
+    setDuplicateSuccessMsg(`Planejamento de ${formatMonthLabel(selectedMonth, 'short')} duplicado com sucesso para ${formatMonthLabel(nextMonth, 'full')}!`);
+    setTimeout(() => setDuplicateSuccessMsg(null), 4000);
   };
 
   const handleSavePlan = async () => {
-    // Recalculate totals from category plans
     let sumIncome = 0;
     let sumExp = 0;
     let sumInv = 0;
@@ -101,6 +109,8 @@ export const PlanningView: React.FC = () => {
 
     const updated: MonthlyPlan = {
       ...tempPlan,
+      id: selectedMonth,
+      month: selectedMonth,
       plannedIncome: sumIncome || tempPlan.plannedIncome,
       plannedExpenses: sumExp || tempPlan.plannedExpenses,
       plannedInvestments: sumInv || tempPlan.plannedInvestments,
@@ -120,7 +130,7 @@ export const PlanningView: React.FC = () => {
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
             <span>Planejamento Mensal Orçamentário</span>
             <span>•</span>
-            <span>{activeClient.name}</span>
+            <span>{formatMonthLabel(selectedMonth, 'full')}</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-100 mt-1">
             Orçamento Base Zero e Planejado x Realizado
@@ -130,14 +140,20 @@ export const PlanningView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center flex-wrap gap-2.5">
+          <MonthSelector
+            selectedMonth={selectedMonth}
+            onChange={setSelectedMonth}
+            transactions={transactions}
+          />
+
           <button
             onClick={handleDuplicateMonth}
-            className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-medium border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
             title="Copiar metas planejadas para o próximo mês"
           >
             <Copy className="w-3.5 h-3.5 text-blue-400" />
-            <span>Duplicar Mês Anterior</span>
+            <span>Duplicar Mês</span>
           </button>
 
           {!isEditingTargets ? (
@@ -146,14 +162,14 @@ export const PlanningView: React.FC = () => {
                 setTempPlan(monthlyPlan);
                 setIsEditingTargets(true);
               }}
-              className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span>Ajustar Metas</span>
             </button>
           ) : (
             <button
               onClick={handleSavePlan}
-              className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Save className="w-3.5 h-3.5" />
               <span>Salvar Metas</span>
@@ -162,10 +178,10 @@ export const PlanningView: React.FC = () => {
         </div>
       </div>
 
-      {duplicateSuccess && (
+      {duplicateSuccessMsg && (
         <div className="p-3 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>Planejamento duplicado com sucesso para o próximo mês (Setembro 2026)!</span>
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{duplicateSuccessMsg}</span>
         </div>
       )}
 
@@ -174,12 +190,12 @@ export const PlanningView: React.FC = () => {
         
         {/* Receita */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <span className="text-[11px] font-medium text-slate-400">Receitas</span>
+          <span className="text-[11px] font-medium text-slate-400">Receitas ({formatMonthLabel(selectedMonth, 'short')})</span>
           <div className="mt-2 space-y-1">
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-slate-500">Plan:</span>
               <span className="text-xs font-mono font-medium text-slate-300">
-                {formatCurrency(monthlyPlan.plannedIncome, currency)}
+                {formatCurrency(monthlyPlan.plannedIncome || 0, currency)}
               </span>
             </div>
             <div className="flex items-baseline justify-between">
@@ -193,12 +209,12 @@ export const PlanningView: React.FC = () => {
 
         {/* Despesas */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <span className="text-[11px] font-medium text-slate-400">Despesas</span>
+          <span className="text-[11px] font-medium text-slate-400">Despesas ({formatMonthLabel(selectedMonth, 'short')})</span>
           <div className="mt-2 space-y-1">
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-slate-500">Plan:</span>
               <span className="text-xs font-mono font-medium text-slate-300">
-                {formatCurrency(monthlyPlan.plannedExpenses, currency)}
+                {formatCurrency(monthlyPlan.plannedExpenses || 0, currency)}
               </span>
             </div>
             <div className="flex items-baseline justify-between">
@@ -212,12 +228,12 @@ export const PlanningView: React.FC = () => {
 
         {/* Investimentos */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <span className="text-[11px] font-medium text-slate-400">Investimentos</span>
+          <span className="text-[11px] font-medium text-slate-400">Investimentos ({formatMonthLabel(selectedMonth, 'short')})</span>
           <div className="mt-2 space-y-1">
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-slate-500">Plan:</span>
               <span className="text-xs font-mono font-medium text-slate-300">
-                {formatCurrency(monthlyPlan.plannedInvestments, currency)}
+                {formatCurrency(monthlyPlan.plannedInvestments || 0, currency)}
               </span>
             </div>
             <div className="flex items-baseline justify-between">
@@ -255,81 +271,70 @@ export const PlanningView: React.FC = () => {
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-slate-500">Plan:</span>
               <span className="text-xs font-mono font-medium text-slate-300">
-                {formatPercent(plannedSavingsRate)}
+                {formatPercent(plannedSavingsRate * 100)}
               </span>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-emerald-400 font-semibold">Real:</span>
               <span className="text-sm font-mono font-bold text-emerald-400">
-                {formatPercent(realizedSavingsRate)}
+                {formatPercent(realizedSavingsRate * 100)}
               </span>
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* Category-by-Category Planning Breakdown */}
+      {/* Category Budget Breakdown Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-slate-100">Detalhamento por Categoria</h2>
-            <p className="text-xs text-slate-400">Acompanhamento do consumo orçamentário por linha</p>
+            <h3 className="text-sm font-bold text-slate-100">Detalhamento por Categoria</h3>
+            <p className="text-xs text-slate-400">Acompanhamento e execução orçamentária de {formatMonthLabel(selectedMonth, 'full')}</p>
           </div>
-          {isEditingTargets && (
-            <span className="text-xs font-bold text-amber-400 animate-pulse">
-              Modo de Edição Ativo: Ajuste os valores abaixo e clique em "Salvar Metas"
-            </span>
-          )}
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-              <tr>
-                <th className="py-3 px-4">Categoria</th>
-                <th className="py-3 px-4">Grupo</th>
-                <th className="py-3 px-4 text-right">Planejado</th>
-                <th className="py-3 px-4 text-right">Realizado</th>
-                <th className="py-3 px-4 text-right">Disponível</th>
-                <th className="py-3 px-4 min-w-[200px]">% Utilizado</th>
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-800 text-slate-400">
+                <th className="pb-3 font-semibold">Categoria</th>
+                <th className="pb-3 font-semibold">Tipo</th>
+                <th className="pb-3 font-semibold text-right">Meta Planejada</th>
+                <th className="pb-3 font-semibold text-right">Executado Real</th>
+                <th className="pb-3 font-semibold text-right">Desvio / Saldo</th>
+                <th className="pb-3 font-semibold text-center w-36">Execução (%)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
-              {categories.filter(c => !c.isGroup).map((cat) => {
-                const planned = isEditingTargets 
-                  ? tempPlan.categoryPlans[cat.id]?.plannedAmount || 0 
-                  : (cat.budgetPlanned !== null && cat.budgetPlanned !== undefined && cat.budgetPlanned > 0)
-                  ? cat.budgetPlanned
-                  : (monthlyPlan.categoryPlans[cat.id]?.plannedAmount || cat.monthlyBudgetSuggested || 0);
-                
-                const realized = categoryRealizedMap[cat.id] || (cat.budgetSpent || 0);
-                const available = planned - realized;
-                const percentUsed = planned > 0 ? (realized / planned) * 100 : 0;
-                const clampedPercent = Math.min(100, Math.round(percentUsed));
-
-                const isOverBudget = realized > planned && planned > 0;
+            <tbody className="divide-y divide-slate-800/60">
+              {categories.filter(c => !c.isGroup).map(cat => {
+                const planned = isEditingTargets
+                  ? (tempPlan.categoryPlans[cat.id]?.plannedAmount ?? cat.budgetPlanned ?? 0)
+                  : (monthlyPlan.categoryPlans[cat.id]?.plannedAmount ?? cat.budgetPlanned ?? 0);
+                const realized = categoryRealizedMap[cat.id] || 0;
+                const diff = cat.type === 'RECEITA' ? realized - planned : planned - realized;
+                const pct = planned > 0 ? (realized / planned) * 100 : 0;
 
                 return (
-                  <tr key={cat.id} className="hover:bg-slate-800/40 transition-colors">
-                    
-                    {/* Category Name */}
-                    <td className="py-3 px-4 font-semibold text-slate-100 flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                      <span>{cat.name}</span>
+                  <tr key={cat.id} className="hover:bg-slate-800/40">
+                    <td className="py-3 font-medium text-slate-200">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color || '#3B82F6' }} />
+                        <span>{cat.name}</span>
+                      </div>
                     </td>
-
-                    {/* Group */}
-                    <td className="py-3 px-4 text-slate-400">
-                      {cat.groupName}
+                    <td className="py-3 text-slate-400">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        cat.type === 'RECEITA' ? 'bg-emerald-500/10 text-emerald-400' :
+                        cat.type === 'INVESTIMENTO' ? 'bg-blue-500/10 text-blue-400' :
+                        'bg-slate-800 text-slate-300'
+                      }`}>
+                        {cat.type}
+                      </span>
                     </td>
-
-                    {/* Planned Input/Value */}
-                    <td className="py-3 px-4 text-right font-mono font-medium">
+                    <td className="py-3 text-right font-mono font-medium text-slate-300">
                       {isEditingTargets ? (
                         <input
                           type="number"
-                          step="10"
                           value={planned}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value) || 0;
@@ -337,49 +342,39 @@ export const PlanningView: React.FC = () => {
                               ...prev,
                               categoryPlans: {
                                 ...prev.categoryPlans,
-                                [cat.id]: { plannedAmount: val }
+                                [cat.id]: {
+                                  categoryId: cat.id,
+                                  categoryName: cat.name,
+                                  plannedAmount: val
+                                }
                               }
                             }));
                           }}
-                          className="w-28 p-1 text-right bg-slate-800 border border-blue-500 rounded text-slate-100 font-mono text-xs focus:outline-none"
+                          className="w-24 px-2 py-1 rounded bg-slate-800 border border-slate-700 text-right font-mono text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                         />
                       ) : (
                         formatCurrency(planned, currency)
                       )}
                     </td>
-
-                    {/* Realized */}
-                    <td className="py-3 px-4 text-right font-mono font-semibold text-slate-200">
+                    <td className="py-3 text-right font-mono font-semibold text-slate-100">
                       {formatCurrency(realized, currency)}
                     </td>
-
-                    {/* Available */}
-                    <td className={`py-3 px-4 text-right font-mono font-bold ${available >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {formatCurrency(available, currency)}
+                    <td className="py-3 text-right font-mono">
+                      <span className={diff >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                        {diff >= 0 ? '+' : ''}{formatCurrency(diff, currency)}
+                      </span>
                     </td>
-
-                    {/* Progress Bar */}
-                    <td className="py-3 px-4">
-                      <div className="space-y-1">
-                        <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <td className="py-3 px-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                           <div 
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              isOverBudget 
-                                ? 'bg-rose-500' 
-                                : percentUsed > 80 
-                                ? 'bg-amber-400' 
-                                : 'bg-emerald-400'
-                            }`}
-                            style={{ width: `${clampedPercent}%` }}
+                            className={`h-full rounded-full ${pct > 100 && cat.type === 'DESPESA' ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${Math.min(100, pct)}%` }}
                           />
                         </div>
-                        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                          <span>{percentUsed.toFixed(1)}%</span>
-                          {isOverBudget && <span className="text-rose-400 font-bold">Estourou meta</span>}
-                        </div>
+                        <span className="text-[11px] font-mono text-slate-400 w-10 text-right">{Math.round(pct)}%</span>
                       </div>
                     </td>
-
                   </tr>
                 );
               })}

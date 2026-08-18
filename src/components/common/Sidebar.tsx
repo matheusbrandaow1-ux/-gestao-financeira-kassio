@@ -16,7 +16,8 @@ import {
   Briefcase,
   ShieldCheck,
   UserCheck,
-  Sparkles
+  Sparkles,
+  Coins
 } from 'lucide-react';
 import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../context/AuthContext';
@@ -25,6 +26,7 @@ export type TabType =
   | 'dashboard' 
   | 'transactions' 
   | 'planning' 
+  | 'investments'
   | 'goals' 
   | 'assets' 
   | 'accounts' 
@@ -68,6 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'ai-assistant', label: 'Assistente IA', icon: Sparkles, section: 'main' },
     { id: 'transactions', label: 'Transações', icon: ArrowLeftRight, section: 'main' },
     { id: 'planning', label: 'Planejamento', icon: CalendarRange, section: 'main' },
+    { id: 'investments', label: 'Investimentos', icon: Coins, section: 'main' },
     { id: 'categories', label: 'Categorias', icon: Tags, section: 'main' },
     { id: 'goals', label: 'Objetivos', icon: Target, section: 'main' },
     { id: 'assets', label: 'Patrimônio', icon: Landmark, section: 'main' },

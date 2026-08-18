@@ -25,7 +25,7 @@ async function diagnoseJune2026() {
   // 1. Etapa 1: Leitura Lunch Money
   console.log('\n[Etapa 1: Leitura Lunch Money] Verificando conexão e buscando dados...');
   const me = await client.getMe();
-  console.log(`- Usuário Lunch Money autenticado: ${me.user_name || me.user_email} (Moeda: ${me.primary_currency_name})`);
+  console.log(`- Usuário Lunch Money autenticado: ${me.user_name || me.user_email} (Moeda: ${me.primary_currency})`);
 
   const categoriesRes = await client.getCategories({ format: 'flattened' });
   const rawCategories = categoriesRes.categories || [];
@@ -75,7 +75,7 @@ async function diagnoseJune2026() {
       payee: tx.payee,
       description: tx.notes || tx.original_name || tx.payee,
       notes: tx.notes,
-      amount: Math.abs(parseFloat(tx.amount || '0')),
+      amount: Math.abs(parseFloat(String(tx.amount || '0'))),
       currency: tx.currency ? tx.currency.toUpperCase() : 'CHF',
       date: tx.date,
       country: 'Suíça'

@@ -469,6 +469,49 @@ export interface MonthlyInsightsData {
   summaryParagraph: string;
 }
 
+export interface InvestmentHolding {
+  id: string;
+  ticker?: string;
+  name: string;
+  assetClass: 'AÇÕES_BRASIL' | 'RENDA_FIXA_BRASIL' | 'ETF_GLOBAL' | 'PENSION_3A' | 'CRYPTO' | 'RENDA_VARIAVEL' | 'OUTROS';
+  currency: CurrencyCode;
+  quantity?: number;
+  averagePrice?: number;
+  currentPrice?: number;
+  totalCostOriginal?: number;
+  currentValueOriginal: number;
+  currentValueCHF: number;
+  exchangeRateToCHF: number;
+  unrealizedProfitLossOriginal?: number;
+  unrealizedProfitLossPercent?: number;
+  institution?: string;
+  portfolioId?: string;
+  notes?: string;
+  updatedAt: string;
+}
+
+export interface InvestmentPortfolio {
+  id: string;
+  clientId: string;
+  name: string;
+  currency: CurrencyCode;
+  country: string;
+  totalValueOriginal: number;
+  totalValueCHF: number;
+  totalCostOriginal?: number;
+  unrealizedProfitLossOriginal?: number;
+  unrealizedProfitLossPercent?: number;
+  holdings: InvestmentHolding[];
+  updatedAt: string;
+}
+
+export interface FXRateTable {
+  baseCurrency: CurrencyCode;
+  rates: Record<string, number>; // e.g. { 'BRL': 0.158, 'EUR': 0.942, 'USD': 0.884, 'CHF': 1.0 }
+  lastUpdated: string;
+  isRealTime?: boolean;
+}
+
 export interface MonthlyFinancialSummaryReportData {
   month: string;
   currency: string;
@@ -497,5 +540,7 @@ export interface MonthlyFinancialSummaryReportData {
   pendingItemsCount: number;
   aiObservations: string;
 }
+
+
 
 

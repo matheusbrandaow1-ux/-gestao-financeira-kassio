@@ -6,6 +6,7 @@ import { Sidebar, TabType } from './components/common/Sidebar';
 import { DashboardView } from './views/DashboardView';
 import { TransactionsView } from './views/TransactionsView';
 import { PlanningView } from './views/PlanningView';
+import { InvestmentsView } from './views/InvestmentsView';
 import { GoalsView } from './views/GoalsView';
 import { AssetsView } from './views/AssetsView';
 import { AccountsView } from './views/AccountsView';
@@ -74,6 +75,8 @@ const AppContent: React.FC = () => {
         return <TransactionsView />;
       case 'planning':
         return <PlanningView />;
+      case 'investments':
+        return <InvestmentsView />;
       case 'goals':
         return <GoalsView />;
       case 'assets':

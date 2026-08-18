@@ -19,6 +19,8 @@ import { useClient } from '../context/ClientContext';
 import { useAuth } from '../context/AuthContext';
 import { CanonicalTransaction, TransactionType, ReviewStatus, CurrencyCode } from '../types';
 import { formatCurrency } from '../lib/money';
+import { MonthSelector } from '../components/common/MonthSelector';
+import { getAvailableMonths } from '../lib/monthUtils';
 
 export const TransactionsView: React.FC = () => {
   const { 
@@ -36,6 +38,11 @@ export const TransactionsView: React.FC = () => {
   const { role } = useAuth();
   const isConsultant = role === 'CONSULTANT' || role === 'ADMIN';
 
+  // Determine available transaction months
+  const availableMonths = useMemo(() => {
+    return getAvailableMonths(transactions, 'desc');
+  }, [transactions]);
+
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState<string>('ALL');
@@ -44,7 +51,14 @@ export const TransactionsView: React.FC = () => {
   const [selectedReviewStatus, setSelectedReviewStatus] = useState<string>('ALL');
   const [selectedCurrency, setSelectedCurrency] = useState<string>('ALL');
   const [recurringOnly, setRecurringOnly] = useState<boolean>(false);
-  const [monthFilter, setMonthFilter] = useState<string>('2026-08');
+  const [monthFilter, setMonthFilter] = useState<string>(() => availableMonths[0] || '2026-08');
+
+  // Keep monthFilter in sync if transactions change
+  React.useEffect(() => {
+    if (monthFilter !== 'ALL' && availableMonths.length > 0 && !availableMonths.includes(monthFilter)) {
+      setMonthFilter(availableMonths[0]);
+    }
+  }, [availableMonths, monthFilter]);
 
   // Modals state
   const [isNewTxOpen, setIsNewTxOpen] = useState(false);
@@ -260,19 +274,15 @@ export const TransactionsView: React.FC = () => {
             />
           </div>
 
-          {/* Month Selector */}
+          {/* Dynamic Month Selector */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 shrink-0">Mês:</span>
-            <select
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-            >
-              <option value="2026-08">Agosto 2026</option>
-              <option value="2026-07">Julho 2026</option>
-              <option value="2026-06">Junho 2026</option>
-              <option value="ALL">Todo o Histórico</option>
-            </select>
+            <MonthSelector
+              selectedMonth={monthFilter}
+              onChange={setMonthFilter}
+              transactions={transactions}
+              allowAllOption={true}
+            />
           </div>
         </div>
 
