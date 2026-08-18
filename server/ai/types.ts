@@ -1,18 +1,35 @@
+export interface MerchantResearchMetadata {
+  query: string;
+  canonicalMerchant: string;
+  legalName?: string;
+  merchantType?: string;
+  country?: string;
+  city?: string;
+  sourceUrls?: string[];
+  sourceTitle?: string;
+  evidenceSummary: string;
+  researchedAt: string;
+  confidence: number;
+}
+
 export interface MerchantKnowledgeItem {
   merchantKey: string; // uppercase normalized key e.g. "DIGITEC GALAXUS", "COOP", "SWISSCOM"
   normalizedName: string;
+  canonicalMerchant?: string;
   legalName?: string;
   country?: string;
+  city?: string;
   businessType?: string;
   suggestedCategoryId?: string;
   suggestedCategoryName?: string;
   suggestedSubcategoryName?: string;
   confidence: number; // 0 - 100
-  source: 'RULE' | 'HISTORY_OVERRIDE' | 'GEMINI' | 'SEARCH_GROUNDING';
+  source: 'HUMAN_CORRECTION' | 'MERCHANT_MEMORY' | 'DETERMINISTIC_RULE' | 'MERCHANT_RESEARCH' | 'AI_REASONING' | 'HUMAN_REVIEW';
   reasoning: string;
   lastCheckedAt: string;
   clientSpecificOverride?: boolean;
   clientId?: string;
+  researchMetadata?: MerchantResearchMetadata;
 }
 
 export interface HumanCorrectionRecord {
@@ -40,8 +57,8 @@ export interface AICostMetrics {
 }
 
 export interface AIConfig {
-  autoClassifyThreshold: number; // Default 90
-  reviewRecommendedThreshold: number; // Default 70
+  autoClassifyThreshold: number; // Default 90 (0.90)
+  reviewRecommendedThreshold: number; // Default 70 (0.70)
   enableSearchGrounding: boolean; // Default true
 }
 
@@ -50,20 +67,37 @@ export interface GroundingSource {
   title: string;
 }
 
+export type ClassificationSource = 
+  | 'HUMAN_CORRECTION' 
+  | 'MERCHANT_MEMORY' 
+  | 'DETERMINISTIC_RULE' 
+  | 'MERCHANT_RESEARCH' 
+  | 'AI_REASONING' 
+  | 'HUMAN_REVIEW';
+
 export interface ClassificationResult {
   transactionId?: string;
+  rawPayee?: string;
+  normalizedMerchant?: string;
+  canonicalMerchant?: string;
   categoryId?: string;
   categoryName?: string;
   subcategoryId?: string;
   subcategoryName?: string;
-  confidenceScore: number; // 0 to 100
+  transactionType?: 'DESPESA' | 'RECEITA' | 'INVESTIMENTO' | 'TRANSFERENCIA' | 'OUTROS';
+  confidenceScore: number; // 0 to 100 (normalized to 0-1 scale internally / >=90 auto-apply)
   reasoning: string; // Short and objective
-  source: 'EXACT_RULE' | 'MERCHANT_CACHE' | 'HISTORICAL_PATTERN' | 'GEMINI_AI' | 'GOOGLE_SEARCH_GROUNDING';
+  reasoningShort?: string;
+  source: ClassificationSource;
+  researchUsed?: boolean;
+  evidenceSummary?: string;
+  sourceUrls?: string[];
   merchantKnowledge?: MerchantKnowledgeItem;
   isAutoClassified: boolean;
   needsReview: boolean;
   sentToPending: boolean;
   groundingSources?: GroundingSource[];
+  isTransferOrPersonal?: boolean;
 }
 
 export interface ClassifyTransactionInput {

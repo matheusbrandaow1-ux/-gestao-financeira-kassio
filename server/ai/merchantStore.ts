@@ -12,11 +12,18 @@ class MerchantKnowledgeStore {
     if (!text) return '';
     return text
       .toUpperCase()
+      .replace(/^ACHAT\s+MASTERCARD\s+\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}\s+/i, '')
+      .replace(/^D[EÉ]BIT\s+TWINT\s+/i, '')
+      .replace(/^CR[EÉ]DIT\s+TWINT\s+/i, '')
       .replace(/^PAYPAL\s*\*\s*/i, '')
       .replace(/^TWINT\s*\*\s*/i, '')
       .replace(/^SUMUP\s*\*\s*/i, '')
       .replace(/^STRIPE\s*\*\s*/i, '')
       .replace(/^SQ\s*\*\s*/i, '')
+      .replace(/\bNUM[EÉ]RO\s+DE\s+CARTE:.*$/i, '')
+      .replace(/\b04\d{12,}\b/g, '') // Terminal transaction codes
+      .replace(/\b\d{12,}\b/g, '')
+      .replace(/^\d{3,4}\s*-\s*/, '') // Store IDs like 0287 -
       .replace(/\b(AG|SA|GMBH|SARL|LLC|INC|LTD|COOP)\b/gi, '')
       .replace(/[^\w\s]/gi, '')
       .replace(/\s+/g, ' ')
@@ -24,56 +31,36 @@ class MerchantKnowledgeStore {
   }
 
   private seedCommonSwissKnowledge() {
+    const catIntentToCategoryName: Record<string, string> = {
+      'SUPERMERCADO': 'Supermercado',
+      'RESTAURANTES': 'Restaurantes',
+      'COMBUSTIVEL': 'Combustível',
+      'SAUDE': 'Farmácia',
+      'ESTACIONAMENTO': 'Estacionamento',
+      'TRANSPORTE': 'Transporte Público/ Uber',
+      'STREAMING': 'Streaming',
+      'SOFTWARE': 'Software / Apps',
+      'VESTUARIO': 'Vestuário',
+      'EVENTOS': 'Eventos',
+      'ESPORTE': 'Academia / Esporte',
+      'COMPRAS': 'Compras Diversas',
+      'TARIFAS': 'Tarifas Bancárias',
+      'TELECOM': 'Contas Residenciais',
+      'SEGURO_SAUDE': 'Seguro Saúde LAMal',
+      'ELETRONICOS': 'Compras Diversas',
+      'LAZER': 'Hobbies'
+    };
+
     const seedMerchants: Array<Partial<MerchantKnowledgeItem> & { key: string; name: string; type: string; catIntent: string; reason: string }> = [
       {
-        key: 'DIGITEC GALAXUS',
-        name: 'Digitec Galaxus',
-        legalName: 'Digitec Galaxus AG',
+        key: 'LIDL',
+        name: 'Lidl',
+        legalName: 'Lidl Schweiz AG',
         country: 'Suíça',
-        type: 'Varejo / Eletrônicos & E-commerce',
-        catIntent: 'ELETRONICOS',
-        confidence: 96,
-        reason: 'Digitec Galaxus é uma varejista suíça especializada em eletrônicos, tecnologia e equipamentos.'
-      },
-      {
-        key: 'DIGITEC',
-        name: 'Digitec',
-        legalName: 'Digitec Galaxus AG',
-        country: 'Suíça',
-        type: 'Varejo / Eletrônicos',
-        catIntent: 'ELETRONICOS',
-        confidence: 96,
-        reason: 'Digitec é a principal loja suíça de eletrônicos, computação e tecnologia.'
-      },
-      {
-        key: 'GALAXUS',
-        name: 'Galaxus',
-        legalName: 'Digitec Galaxus AG',
-        country: 'Suíça',
-        type: 'Varejo / E-commerce Geral',
-        catIntent: 'COMPRAS',
-        confidence: 94,
-        reason: 'Galaxus é a maior loja online de departamentos e compras da Suíça.'
-      },
-      {
-        key: 'COOP SUPERMARKT',
-        name: 'Coop Supermarkt',
-        legalName: 'Coop Genossenschaft',
-        country: 'Suíça',
-        type: 'Supermercado & Alimentação',
+        type: 'Supermercado / Alimentação',
         catIntent: 'SUPERMERCADO',
-        confidence: 98,
-        reason: 'Coop Supermarkt é uma das maiores redes de supermercados e alimentos da Suíça.'
-      },
-      {
-        key: 'COOP',
-        name: 'Coop',
-        legalName: 'Coop Genossenschaft',
-        country: 'Suíça',
-        type: 'Supermercado & Alimentação',
-        catIntent: 'SUPERMERCADO',
-        confidence: 97,
-        reason: 'Coop é uma cooperativa suíça de supermercados e produtos de conveniência.'
+        confidence: 99,
+        reason: 'Lidl é uma das principais redes de supermercado e compras alimentícias na Suíça.'
       },
       {
         key: 'MIGROS',
@@ -82,8 +69,18 @@ class MerchantKnowledgeStore {
         country: 'Suíça',
         type: 'Supermercado & Alimentação',
         catIntent: 'SUPERMERCADO',
-        confidence: 98,
+        confidence: 99,
         reason: 'Migros é a maior rede varejista e de supermercados da Suíça.'
+      },
+      {
+        key: 'COOP',
+        name: 'Coop',
+        legalName: 'Coop Genossenschaft',
+        country: 'Suíça',
+        type: 'Supermercado & Alimentação',
+        catIntent: 'SUPERMERCADO',
+        confidence: 99,
+        reason: 'Coop é uma das maiores cooperativas suíças de supermercados e alimentos.'
       },
       {
         key: 'DENNER',
@@ -92,181 +89,218 @@ class MerchantKnowledgeStore {
         country: 'Suíça',
         type: 'Supermercado / Desconto',
         catIntent: 'SUPERMERCADO',
-        confidence: 96,
-        reason: 'Denner é uma rede suíça de supermercados de desconto (Grupo Migros).'
+        confidence: 98,
+        reason: 'Denner é uma rede suíça de supermercados de desconto.'
       },
       {
-        key: 'ALDI SUISSE',
+        key: 'ALDI',
         name: 'Aldi Suisse',
         legalName: 'Aldi Suisse AG',
         country: 'Suíça',
         type: 'Supermercado / Varejo',
         catIntent: 'SUPERMERCADO',
-        confidence: 95,
+        confidence: 98,
         reason: 'Aldi Suisse é rede de supermercados e alimentação na Suíça.'
       },
       {
-        key: 'LIDL SCHWEIZ',
-        name: 'Lidl Schweiz',
-        legalName: 'Lidl Schweiz AG',
+        key: 'MCDONALDS',
+        name: "McDonald's",
+        legalName: "McDonald's Restaurants Switzerland GmbH",
         country: 'Suíça',
-        type: 'Supermercado / Varejo',
-        catIntent: 'SUPERMERCADO',
-        confidence: 95,
-        reason: 'Lidl Schweiz é uma rede de supermercados e alimentação na Suíça.'
-      },
-      {
-        key: 'SWISSCOM',
-        name: 'Swisscom',
-        legalName: 'Swisscom AG',
-        country: 'Suíça',
-        type: 'Telecomunicações / Internet & Celular',
-        catIntent: 'TELECOM',
-        confidence: 98,
-        reason: 'Swisscom é a principal empresa estatal/pública de telecomunicações, internet e telefonia da Suíça.'
-      },
-      {
-        key: 'SALT MOBILE',
-        name: 'Salt Mobile',
-        legalName: 'Salt Mobile SA',
-        country: 'Suíça',
-        type: 'Telecomunicações / Telefonia & Fibra',
-        catIntent: 'TELECOM',
-        confidence: 97,
-        reason: 'Salt é uma das operadoras móveis e de fibra óptica líderes na Suíça.'
-      },
-      {
-        key: 'SUNRISE',
-        name: 'Sunrise',
-        legalName: 'Sunrise GmbH',
-        country: 'Suíça',
-        type: 'Telecomunicações / Internet & TV',
-        catIntent: 'TELECOM',
-        confidence: 97,
-        reason: 'Sunrise é uma provedora suíça líder em telecomunicações, celular e banda larga.'
-      },
-      {
-        key: 'SBB CFF FFS',
-        name: 'SBB CFF FFS',
-        legalName: 'Schweizerische Bundesbahnen SBB',
-        country: 'Suíça',
-        type: 'Transporte Público Ferroviário',
-        catIntent: 'TRANSPORTE',
+        type: 'Restaurante / Fast Food',
+        catIntent: 'RESTAURANTES',
         confidence: 99,
-        reason: 'SBB CFF FFS é a ferrovia federal suíça responsável pelo transporte ferroviário nacional.'
+        reason: "McDonald's é rede global de restaurantes e refeições rápidas."
       },
       {
-        key: 'SBB',
-        name: 'SBB',
-        legalName: 'SBB CFF FFS',
+        key: 'BURGER KING',
+        name: 'Burger King',
+        legalName: 'Burger King Switzerland',
         country: 'Suíça',
-        type: 'Transporte Público / Trens',
-        catIntent: 'TRANSPORTE',
+        type: 'Restaurante / Fast Food',
+        catIntent: 'RESTAURANTES',
         confidence: 99,
-        reason: 'SBB é a companhia de trens e transporte público da Suíça.'
+        reason: 'Burger King é rede de restaurantes e fast food.'
       },
       {
-        key: 'HELSANA',
-        name: 'Helsana',
-        legalName: 'Helsana Versicherungen AG',
+        key: 'LA BOHEME',
+        name: 'La Bohème',
         country: 'Suíça',
-        type: 'Seguro de Saúde Obrigatório (LAMal)',
-        catIntent: 'SAUDE',
+        type: 'Restaurante / Café',
+        catIntent: 'RESTAURANTES',
+        confidence: 96,
+        reason: 'La Bohème é restaurante/bistrô localizado em La Chaux-de-Fonds, Suíça.'
+      },
+      {
+        key: 'ENI',
+        name: 'Eni Station',
+        legalName: 'Eni Suisse SA',
+        country: 'Suíça',
+        type: 'Posto de Combustível',
+        catIntent: 'COMBUSTIVEL',
         confidence: 98,
-        reason: 'Helsana é uma das maiores seguradoras de saúde da Suíça para planos LAMal e complementares.'
+        reason: 'Eni é rede de postos de abastecimento e combustíveis na Suíça.'
       },
       {
-        key: 'SWICA',
-        name: 'SWICA',
-        legalName: 'SWICA Krankenversicherung AG',
+        key: 'PARKINGPAY',
+        name: 'Parkingpay',
+        legalName: 'Digitalparking AG',
         country: 'Suíça',
-        type: 'Seguro de Saúde (LAMal)',
+        type: 'Estacionamento Digital',
+        catIntent: 'ESTACIONAMENTO',
+        confidence: 99,
+        reason: 'Parkingpay é o principal aplicativo de pagamento de estacionamento público na Suíça.'
+      },
+      {
+        key: 'SUN STORE',
+        name: 'Pharmacie Sun Store',
+        legalName: 'GaleniCare AG',
+        country: 'Suíça',
+        type: 'Farmácia & Medicamentos',
         catIntent: 'SAUDE',
-        confidence: 98,
-        reason: 'SWICA é uma das principais seguradoras de saúde da Suíça.'
+        confidence: 99,
+        reason: 'Sun Store é uma importante rede suíça de farmácias e dermocosméticos.'
       },
       {
-        key: 'CSS VERSICHERUNG',
-        name: 'CSS Versicherung',
-        legalName: 'CSS Kranken-Versicherung AG',
+        key: 'AMAVITA',
+        name: 'Pharmacie Amavita',
+        legalName: 'GaleniCare AG',
         country: 'Suíça',
-        type: 'Seguro de Saúde (LAMal)',
+        type: 'Farmácia & Saúde',
         catIntent: 'SAUDE',
-        confidence: 98,
-        reason: 'CSS é uma das maiores caixas de seguro saúde da Suíça.'
+        confidence: 99,
+        reason: 'Amavita é uma das maiores redes de farmácias da Suíça.'
       },
       {
-        key: 'VIAC',
-        name: 'VIAC',
-        legalName: 'VIAC Technologies AG / Terzo Vorsorgestiftung',
+        key: 'KKIOSK',
+        name: 'k kiosk',
+        legalName: 'Valora Schweiz AG',
         country: 'Suíça',
-        type: 'Previdência Privada 3º Pilar / Investimentos',
-        catIntent: 'PREVIDENCIA_3A',
+        type: 'Conveniência & Tabacaria',
+        catIntent: 'COMPRAS',
         confidence: 97,
-        reason: 'VIAC é uma plataforma suíça de previdência 3a e 3º pilar com carteiras indexadas.'
+        reason: 'k kiosk é rede suíça de bancas de conveniência, tabaco e jornais.'
       },
       {
-        key: 'SWISSQUOTE',
-        name: 'Swissquote',
-        legalName: 'Swissquote Bank SA',
-        country: 'Suíça',
-        type: 'Banco de Investimentos / Corretora',
-        catIntent: 'INVESTIMENTOS',
-        confidence: 98,
-        reason: 'Swissquote é um banco suíço líder em negociação de ações, ETFs e corretagem financeira online.'
-      },
-      {
-        key: 'INTERACTIVE BROKERS',
-        name: 'Interactive Brokers',
-        legalName: 'Interactive Brokers Ireland / UK',
+        key: 'APPLE',
+        name: 'Apple / App Store',
+        legalName: 'Apple Distribution International Ltd',
         country: 'Internacional / Suíça',
-        type: 'Corretora Global de Investimentos',
-        catIntent: 'INVESTIMENTOS',
-        confidence: 98,
-        reason: 'Interactive Brokers é uma das maiores corretoras mundiais de ETFs e ações globais.'
+        type: 'Software & Serviços Digitais',
+        catIntent: 'SOFTWARE',
+        confidence: 99,
+        reason: 'Apple / Apple.com/bill é assinatura de apps, iCloud e serviços digitais.'
       },
       {
         key: 'NETFLIX',
         name: 'Netflix',
-        legalName: 'Netflix Services Switzerland / EU',
-        country: 'Internacional',
-        type: 'Serviço de Streaming de Vídeo',
+        legalName: 'Netflix International B.V.',
+        country: 'Internacional / Suíça',
+        type: 'Streaming de Vídeo',
         catIntent: 'STREAMING',
         confidence: 99,
-        reason: 'Netflix é uma plataforma global de streaming de filmes e séries por assinatura.'
+        reason: 'Netflix é serviço de streaming e entretenimento digital por assinatura.'
       },
       {
-        key: 'SPOTIFY',
-        name: 'Spotify',
-        legalName: 'Spotify AB',
-        country: 'Internacional',
-        type: 'Serviço de Streaming de Música',
-        catIntent: 'STREAMING',
-        confidence: 99,
-        reason: 'Spotify é uma plataforma de streaming de música e podcasts por assinatura.'
-      },
-      {
-        key: 'MANOR',
-        name: 'Manor',
-        legalName: 'Manor AG',
+        key: 'UBER',
+        name: 'Uber',
+        legalName: 'Uber Switzerland GmbH',
         country: 'Suíça',
-        type: 'Loja de Departamentos & Moda',
+        type: 'Transporte / Mobilidade',
+        catIntent: 'TRANSPORTE',
+        confidence: 99,
+        reason: 'Uber é serviço de transporte individual de passageiros por aplicativo.'
+      },
+      {
+        key: 'SHEIN',
+        name: 'SHEIN',
+        country: 'Internacional',
+        type: 'Vestuário & Moda Online',
+        catIntent: 'VESTUARIO',
+        confidence: 98,
+        reason: 'SHEIN é varejista de vestuário, roupas e acessórios online.'
+      },
+      {
+        key: 'BIKINI TEST',
+        name: 'Bikini Test',
+        country: 'Suíça',
+        type: 'Casa de Shows & Eventos Culturais',
+        catIntent: 'EVENTOS',
+        confidence: 96,
+        reason: 'Bikini Test é uma famosa sala de concertos e espaço cultural em La Chaux-de-Fonds, Suíça.'
+      },
+      {
+        key: 'FESTI CONCEPT',
+        name: 'Festi Concept Event Management',
+        legalName: 'Festi Concept Event Management Sàrl',
+        country: 'Suíça',
+        type: 'Eventos & Produção Cultural',
+        catIntent: 'EVENTOS',
+        confidence: 96,
+        reason: 'Festi Concept é produtora suíça de eventos, festivais e entretenimento.'
+      },
+      {
+        key: 'HBC LA CHAUX DE FONDS',
+        name: 'Handball Club La Chaux-de-Fonds',
+        country: 'Suíça',
+        type: 'Clube Esportivo / Handebol',
+        catIntent: 'ESPORTE',
+        confidence: 95,
+        reason: 'HBC La Chaux-de-Fonds é o clube esportivo de handebol da cidade.'
+      },
+      {
+        key: 'GENESIS VAPE',
+        name: 'Genesis Vape',
+        legalName: 'Genesis Vape sàrl',
+        country: 'Suíça',
+        type: 'Comércio / Varejo',
         catIntent: 'COMPRAS',
         confidence: 95,
-        reason: 'Manor é uma tradicional rede de lojas de departamento, moda e artigos para o lar na Suíça.'
+        reason: 'Genesis Vape é comércio especializado em La Chaux-de-Fonds.'
+      },
+      {
+        key: 'SCPO',
+        name: "SCPO - Documents d'identité",
+        country: 'Suíça',
+        type: 'Serviço Público / Taxas de Identidade',
+        catIntent: 'COMPRAS',
+        confidence: 95,
+        reason: 'Service cantonal de la population Neuchâtel - emissão de documentos e taxas oficiais.'
+      },
+      {
+        key: 'KUARIO',
+        name: 'KUARIO',
+        country: 'Internacional / Suíça',
+        type: 'Micro-pagamentos & Impressão',
+        catIntent: 'COMPRAS',
+        confidence: 92,
+        reason: 'KUARIO é plataforma de micro-pagamento para impressões e serviços automatizados.'
+      },
+      {
+        key: 'FRAIS FLEXIPACK',
+        name: 'BCN Frais Flexipack',
+        country: 'Suíça',
+        type: 'Tarifa de Pacote Bancário BCN',
+        catIntent: 'TARIFAS',
+        confidence: 99,
+        reason: 'Frais Flexipack é a tarifa mensal de manutenção de conta do Banque Cantonale Neuchâteloise (BCN).'
       }
     ];
 
     for (const item of seedMerchants) {
       const normalized = this.normalizeMerchantKey(item.key);
+      const catName = catIntentToCategoryName[item.catIntent] || item.catIntent;
       this.knowledgeMap.set(normalized, {
         merchantKey: normalized,
         normalizedName: item.name,
+        canonicalMerchant: item.name,
         legalName: item.legalName,
         country: item.country || 'Suíça',
+        city: (item as any).city,
         businessType: item.type,
         confidence: item.confidence || 95,
-        source: 'RULE',
+        suggestedCategoryName: catName,
+        source: 'MERCHANT_MEMORY',
         reasoning: item.reason,
         lastCheckedAt: '2026-01-01T00:00:00Z',
         clientSpecificOverride: false

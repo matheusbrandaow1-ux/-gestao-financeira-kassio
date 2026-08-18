@@ -220,25 +220,32 @@ router.post('/recurrences', requireAuth, async (req: Request, res: Response) => 
 });
 
 /**
- * 7. POST /api/ai/correction
+ * 7. POST /api/ai/correction (and alias /api/ai/correct)
  * Registers human correction with client isolation
  */
-router.post('/correction', requireAuth, async (req: Request, res: Response) => {
+const handleCorrection = async (req: Request, res: Response) => {
   const { role, clientId, userId } = getSafeUserContext(req);
   const {
     merchant,
     originalDescription,
+    rawDescription,
     previousCategoryId,
     previousCategoryName,
     chosenCategoryId,
+    correctedCategoryId,
     chosenCategoryName,
-    chosenSubcategoryName
+    correctedCategoryName,
+    chosenSubcategoryName,
+    correctedSubcategoryName
   } = req.body || {};
 
-  if (!chosenCategoryId || !chosenCategoryName) {
+  const finalCategoryId = chosenCategoryId || correctedCategoryId;
+  const finalCategoryName = chosenCategoryName || correctedCategoryName;
+
+  if (!finalCategoryId) {
     return res.status(400).json({
       success: false,
-      message: 'chosenCategoryId e chosenCategoryName são obrigatórios.'
+      message: 'chosenCategoryId ou correctedCategoryId é obrigatório.'
     });
   }
 
@@ -246,12 +253,12 @@ router.post('/correction', requireAuth, async (req: Request, res: Response) => {
     const record = financialIntelligenceService.recordHumanCorrection({
       clientId,
       merchant: merchant || '',
-      originalDescription: originalDescription || '',
+      originalDescription: originalDescription || rawDescription || '',
       previousCategoryId,
       previousCategoryName,
-      chosenCategoryId,
-      chosenCategoryName,
-      chosenSubcategoryName,
+      chosenCategoryId: finalCategoryId,
+      chosenCategoryName: finalCategoryName || finalCategoryId,
+      chosenSubcategoryName: chosenSubcategoryName || correctedSubcategoryName,
       changedByRole: role === 'CONSULTANT' ? 'CONSULTANT' : 'CLIENT',
       changedByUserId: userId
     });
@@ -268,7 +275,134 @@ router.post('/correction', requireAuth, async (req: Request, res: Response) => {
       message: 'Erro ao registrar correção humana.'
     });
   }
+};
+
+router.post('/correction', requireAuth, handleCorrection);
+router.post('/correct', requireAuth, handleCorrection);
+
+/**
+ * 7.5. POST /api/ai/process-uncategorized
+ * Retroactive automatic categorization for existing uncategorized transactions
+ */
+router.post('/process-uncategorized', requireAuth, async (req: Request, res: Response) => {
+  const { role, clientId } = getSafeUserContext(req);
+  const { transactions, availableCategories, existingRules, writeBackToLunchMoney } = req.body || {};
+
+  if (!transactions || !Array.isArray(transactions) || !availableCategories || !Array.isArray(availableCategories)) {
+    return res.status(400).json({
+      success: false,
+      message: 'transactions e availableCategories são obrigatórios.'
+    });
+  }
+
+  try {
+    const results: any[] = [];
+    let uncategorizedFound = 0;
+    let categorizedCount = 0;
+    let pendingCount = 0;
+    let researchedCount = 0;
+
+    for (const tx of transactions) {
+      const isUncategorized = 
+        !tx.categoryId || 
+        tx.categoryId === 'cat-none' || 
+        !tx.categoryName || 
+        tx.categoryName.trim().toLowerCase() === 'sem categoria' || 
+        tx.categoryName.trim().toLowerCase() === 'uncategorized';
+
+      if (!isUncategorized && tx.reviewStatus === 'REVISADA') {
+        results.push({ transactionId: tx.id, skipped: true, reason: 'Already reviewed' });
+        continue;
+      }
+
+      uncategorizedFound++;
+      try {
+        const classifyInput = {
+          id: tx.id,
+          merchant: tx.merchant || tx.payee || tx.description,
+          payee: tx.payee,
+          description: tx.description,
+          notes: tx.notes,
+          amount: tx.amount,
+          currency: tx.currency || 'CHF',
+          date: tx.date,
+          accountName: tx.accountName,
+          accountId: tx.accountId,
+          country: 'Suíça'
+        };
+
+        const classification = await financialIntelligenceService.classifySingle(
+          classifyInput,
+          availableCategories,
+          existingRules || [],
+          clientId
+        );
+
+        if (classification.researchUsed || classification.source === 'MERCHANT_RESEARCH') {
+          researchedCount++;
+        }
+
+        if (classification.categoryId && (classification.isAutoClassified || classification.confidenceScore >= 70)) {
+          categorizedCount++;
+        } else {
+          pendingCount++;
+        }
+
+        results.push({
+          transactionId: tx.id,
+          classification,
+          updatedTransaction: {
+            ...tx,
+            categoryId: classification.categoryId || tx.categoryId,
+            categoryName: classification.categoryName || tx.categoryName,
+            subcategoryId: classification.subcategoryId || tx.subcategoryId,
+            reviewStatus: classification.source === 'DETERMINISTIC_RULE' 
+              ? 'AUTO_REGRAS' 
+              : ((classification.isAutoClassified || classification.confidenceScore >= 70) ? 'AI_CLASSIFIED' : 'PENDENTE'),
+            aiClassification: {
+              suggestedCategoryId: classification.categoryId,
+              suggestedCategoryName: classification.categoryName,
+              suggestedSubcategoryId: classification.subcategoryId,
+              suggestedSubcategoryName: classification.subcategoryName,
+              confidenceScore: classification.confidenceScore,
+              reasoning: classification.reasoning,
+              reasoningShort: classification.reasoningShort,
+              source: classification.source,
+              isAutoClassified: classification.isAutoClassified,
+              needsReview: classification.needsReview,
+              researchUsed: classification.researchUsed,
+              evidenceSummary: classification.evidenceSummary,
+              sourceUrls: classification.sourceUrls,
+              canonicalMerchant: classification.canonicalMerchant,
+              groundingSources: classification.groundingSources
+            }
+          }
+        });
+      } catch (err: any) {
+        pendingCount++;
+        results.push({ transactionId: tx.id, error: err?.message || 'Classification failed' });
+      }
+    }
+
+    return res.json({
+      success: true,
+      metrics: {
+        uncategorizedFound,
+        categorizedCount,
+        pendingCount,
+        researchedCount
+      },
+      results
+    });
+  } catch (error: any) {
+    console.error('Erro no /api/ai/process-uncategorized:', error?.message || error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao processar transações retroativamente.'
+    });
+  }
 });
+
 
 /**
  * 8. GET /api/ai/metrics

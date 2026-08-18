@@ -88,9 +88,25 @@ export interface AIClassificationInfo {
   suggestedSubcategoryName?: string;
   confidenceScore: number; // 0 - 100
   reasoning: string;
-  source: 'EXACT_RULE' | 'MERCHANT_CACHE' | 'HISTORICAL_PATTERN' | 'GEMINI_AI' | 'GOOGLE_SEARCH_GROUNDING';
+  reasoningShort?: string;
+  source: 
+    | 'HUMAN_CORRECTION' 
+    | 'MERCHANT_MEMORY' 
+    | 'DETERMINISTIC_RULE' 
+    | 'MERCHANT_RESEARCH' 
+    | 'AI_REASONING' 
+    | 'HUMAN_REVIEW'
+    | 'EXACT_RULE' 
+    | 'MERCHANT_CACHE' 
+    | 'HISTORICAL_PATTERN' 
+    | 'GEMINI_AI' 
+    | 'GOOGLE_SEARCH_GROUNDING';
   isAutoClassified: boolean;
   needsReview: boolean;
+  researchUsed?: boolean;
+  evidenceSummary?: string;
+  sourceUrls?: string[];
+  canonicalMerchant?: string;
   groundingSources?: Array<{ uri: string; title: string }>;
 }
 
@@ -392,6 +408,11 @@ export interface SyncJob {
     categoriesCount?: number;
     tagsCount?: number;
     recurringCount?: number;
+    uncategorizedFound?: number;
+    categorizedCount?: number;
+    pendingCount?: number;
+    researchedCount?: number;
+    writeBackCount?: number;
   };
 }
 

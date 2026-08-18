@@ -943,6 +943,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           existingTransactions: transactions,
           existingAccounts: accounts,
           existingCategories: categories,
+          existingRules: rules,
           existingRecurring: recurringItems
         })
       });

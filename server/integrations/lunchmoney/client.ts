@@ -224,4 +224,48 @@ export class LunchMoneyClient {
   public async getRecurringExpenses(): Promise<LunchMoneyRecurringResponse> {
     return this.request<LunchMoneyRecurringResponse>('/recurring_expenses');
   }
+
+  /**
+   * Updates an existing transaction in Lunch Money (write-back).
+   * Uses Lunch Money API v1 transactions endpoint which officially handles category updates.
+   */
+  public async updateTransaction(
+    id: number | string,
+    transaction: {
+      category_id?: number | null;
+      payee?: string;
+      notes?: string;
+      tags?: string[] | number[];
+      status?: 'cleared' | 'uncleared' | 'recurring';
+    }
+  ): Promise<{ updated: boolean; transaction?: any }> {
+    try {
+      const numericId = typeof id === 'string' ? parseInt(id.replace(/[^\d]/g, ''), 10) : id;
+      if (!numericId || isNaN(numericId)) {
+        return { updated: false };
+      }
+
+      const url = `https://api.lunchmoney.dev/v1/transactions/${numericId}`;
+      const headers = this.getAuthHeader();
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ transaction })
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.warn(`[Lunch Money Write-Back Warning] Status ${response.status} ao atualizar transação ${numericId}: ${errBody}`);
+        return { updated: false };
+      }
+
+      const resData = await response.json();
+      return { updated: Boolean(resData.updated), transaction: resData };
+    } catch (err: any) {
+      console.warn(`Aviso: falha no write-back para Lunch Money (ID ${id}):`, err?.message || err);
+      return { updated: false };
+    }
+  }
 }
+

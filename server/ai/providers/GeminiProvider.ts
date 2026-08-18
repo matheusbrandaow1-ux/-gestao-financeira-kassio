@@ -151,16 +151,20 @@ INSTRUÇÕES RIGOROSAS:
                          availableCategories.find(c => c.name.toLowerCase() === (parsed.categoryName || '').toLowerCase());
 
       const confidence = Math.min(100, Math.max(0, Number(parsed.confidenceScore) || 50));
-      const source = useSearchGrounding ? 'GOOGLE_SEARCH_GROUNDING' : 'GEMINI_AI';
+      const source = useSearchGrounding ? 'MERCHANT_RESEARCH' : 'AI_REASONING';
       const aiConfig = aiMetricsStore.getConfig();
 
       return {
         transactionId: transaction.id,
+        rawPayee: transaction.merchant || transaction.payee || transaction.description,
+        normalizedMerchant: parsed.normalizedMerchantName || transaction.merchant,
+        canonicalMerchant: parsed.normalizedMerchantName || transaction.merchant,
         categoryId: matchedCat ? matchedCat.id : parsed.categoryId,
         categoryName: matchedCat ? matchedCat.name : parsed.categoryName,
         subcategoryName: parsed.subcategoryName,
         confidenceScore: confidence,
         reasoning: parsed.reasoning || `${parsed.normalizedMerchantName || transaction.merchant || 'Estabelecimento'} classificado via Gemini.`,
+        reasoningShort: parsed.reasoning || `${parsed.normalizedMerchantName || transaction.merchant || 'Estabelecimento'} classificado via Gemini.`,
         source,
         isAutoClassified: confidence >= aiConfig.autoClassifyThreshold,
         needsReview: confidence < aiConfig.autoClassifyThreshold,
@@ -169,9 +173,10 @@ INSTRUÇÕES RIGOROSAS:
         merchantKnowledge: {
           merchantKey: (parsed.normalizedMerchantName || transaction.merchant || '').toUpperCase(),
           normalizedName: parsed.normalizedMerchantName || transaction.merchant || '',
+          canonicalMerchant: parsed.normalizedMerchantName || transaction.merchant,
           businessType: parsed.businessType,
           confidence,
-          source: source === 'GOOGLE_SEARCH_GROUNDING' ? 'SEARCH_GROUNDING' : 'GEMINI',
+          source,
           reasoning: parsed.reasoning || '',
           lastCheckedAt: new Date().toISOString()
         }
@@ -180,9 +185,13 @@ INSTRUÇÕES RIGOROSAS:
       console.error('Erro na classificação Gemini:', error);
       return {
         transactionId: transaction.id,
+        rawPayee: transaction.merchant || transaction.payee || transaction.description,
+        normalizedMerchant: transaction.merchant || transaction.description,
+        canonicalMerchant: transaction.merchant || transaction.description,
         confidenceScore: 30,
         reasoning: 'Não foi possível classificar automaticamente por IA.',
-        source: 'GEMINI_AI',
+        reasoningShort: 'IA indisponível ou inconclusiva.',
+        source: 'AI_REASONING',
         isAutoClassified: false,
         needsReview: true,
         sentToPending: true

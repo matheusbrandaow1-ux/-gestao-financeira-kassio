@@ -11,11 +11,14 @@ import {
   CanonicalTransaction, 
   Category, 
   RecurringItem, 
+  CanonicalRule,
   SyncJob, 
   SyncJobStatus 
 } from '../../../src/types';
 import { LunchMoneyTag } from './types';
 import { LunchMoneyAuthError, LunchMoneyError } from './errors';
+import { categorizationEngine } from '../../ai/categorizationEngine';
+import { AssignableCategoryInfo, ClassifyTransactionInput } from '../../ai/types';
 
 export interface SyncResult {
   job: SyncJob;
@@ -35,6 +38,13 @@ export interface SyncResult {
     budgetName?: string;
     accountId: number;
   };
+  metrics?: {
+    uncategorizedFound: number;
+    categorizedCount: number;
+    pendingCount: number;
+    researchedCount: number;
+    writeBackCount: number;
+  };
 }
 
 export class LunchMoneySyncService {
@@ -53,6 +63,7 @@ export class LunchMoneySyncService {
       existingAccounts?: CanonicalAccount[];
       existingCategories?: Category[];
       existingTags?: LunchMoneyTag[];
+      existingRules?: CanonicalRule[];
       existingRecurring?: RecurringItem[];
     } = {}
   ): Promise<SyncResult> {
@@ -352,6 +363,147 @@ export class LunchMoneySyncService {
         }
       });
 
+      // =======================================================================
+      // 11. AUTOMATIC CATEGORIZATION PIPELINE & LUNCH MONEY WRITE-BACK
+      // =======================================================================
+      const availableCategories: AssignableCategoryInfo[] = mappedCategories
+        .filter(c => !c.isGroup && !c.archived)
+        .map(c => ({
+          id: c.id,
+          name: c.name,
+          groupName: c.groupName || 'Geral',
+          type: c.type || 'DESPESA',
+          subcategories: c.subcategories || [],
+          description: c.description
+        }));
+
+      let uncategorizedFoundCount = 0;
+      let categorizedCount = 0;
+      let pendingCount = 0;
+      let researchedCount = 0;
+      let writeBackCount = 0;
+
+      for (let i = 0; i < finalTransactions.length; i++) {
+        const tx = finalTransactions[i];
+
+        // Identify transactions without category (including retroactively existing ones)
+        const isUncategorized = 
+          !tx.categoryId || 
+          tx.categoryId === 'cat-none' || 
+          !tx.categoryName || 
+          tx.categoryName.trim().toLowerCase() === 'sem categoria' || 
+          tx.categoryName.trim().toLowerCase() === 'uncategorized';
+
+        // Respect Human Correction: if user previously reviewed/recategorized, preserve it
+        if (tx.reviewStatus === 'REVISADA' && tx.categoryId && !isUncategorized) {
+          continue;
+        }
+
+        if (isUncategorized) {
+          uncategorizedFoundCount++;
+
+          try {
+            const classifyInput: ClassifyTransactionInput = {
+              id: tx.id,
+              merchant: tx.merchant || tx.payee || tx.description,
+              payee: tx.payee,
+              description: tx.description,
+              notes: tx.notes,
+              amount: tx.amount,
+              currency: tx.currency || 'CHF',
+              date: tx.date,
+              accountName: tx.accountName,
+              accountId: tx.accountId,
+              country: 'Suíça'
+            };
+
+            const result = await categorizationEngine.classifyTransaction(
+              classifyInput,
+              availableCategories,
+              options.existingRules || [],
+              clientId
+            );
+
+            if (result.researchUsed || result.source === 'MERCHANT_RESEARCH') {
+              researchedCount++;
+            }
+
+            if (result.categoryId && result.categoryName) {
+              tx.categoryId = result.categoryId;
+              tx.categoryName = result.categoryName;
+              if (result.subcategoryId) tx.subcategoryId = result.subcategoryId;
+              if (result.subcategoryName) tx.subcategoryName = result.subcategoryName;
+              if (result.canonicalMerchant && (tx.merchant === 'Desconhecido' || !tx.merchant)) {
+                tx.merchant = result.canonicalMerchant;
+              }
+
+              const isAuto = result.isAutoClassified || result.confidenceScore >= 70;
+              tx.reviewStatus = result.source === 'DETERMINISTIC_RULE' ? 'AUTO_REGRAS' : (isAuto ? 'AI_CLASSIFIED' : 'PENDENTE');
+
+              tx.aiClassification = {
+                suggestedCategoryId: result.categoryId,
+                suggestedCategoryName: result.categoryName,
+                suggestedSubcategoryId: result.subcategoryId,
+                suggestedSubcategoryName: result.subcategoryName,
+                confidenceScore: result.confidenceScore,
+                reasoning: result.reasoning,
+                reasoningShort: result.reasoningShort,
+                source: result.source,
+                isAutoClassified: result.isAutoClassified,
+                needsReview: result.needsReview,
+                researchUsed: result.researchUsed,
+                evidenceSummary: result.evidenceSummary,
+                sourceUrls: result.sourceUrls,
+                canonicalMerchant: result.canonicalMerchant,
+                groundingSources: result.groundingSources
+              };
+
+              if (isAuto) {
+                categorizedCount++;
+              } else {
+                pendingCount++;
+              }
+
+              // Write-back to Lunch Money API v2
+              let lmCatId: number | undefined;
+              if (result.categoryId.startsWith('cat-lm-')) {
+                const parsedId = parseInt(result.categoryId.replace('cat-lm-', ''), 10);
+                if (!isNaN(parsedId)) lmCatId = parsedId;
+              } else {
+                const matchedCat = mappedCategories.find(c => c.id === result.categoryId);
+                if (matchedCat && matchedCat.lunchMoneyCategoryId) {
+                  lmCatId = matchedCat.lunchMoneyCategoryId;
+                }
+              }
+
+              const lmTxId = tx.lunchMoneyTransactionId || (tx.externalId ? parseInt(tx.externalId, 10) : undefined);
+              if (lmTxId && lmCatId && this.client) {
+                try {
+                  await this.client.updateTransaction(lmTxId, {
+                    category_id: lmCatId
+                  });
+                  writeBackCount++;
+                } catch (wbErr: any) {
+                  console.warn(`[Sync Write-back Notice] Falha no write-back da transação ${lmTxId} no Lunch Money:`, wbErr?.message || wbErr);
+                }
+              }
+
+              // Ensure updated transaction is added to persistence queue
+              const alreadyInPersist = transactionsToPersist.some(p => p.id === tx.id);
+              if (!alreadyInPersist) {
+                transactionsToPersist.push(tx);
+              }
+            } else {
+              pendingCount++;
+              tx.reviewStatus = 'PENDENTE';
+            }
+          } catch (classifyErr: any) {
+            console.warn(`[Categorization Error] Erro ao classificar transação ${tx.id}:`, classifyErr?.message || classifyErr);
+            pendingCount++;
+          }
+        }
+      }
+
       // Set Sync Job Results
       job.accountsCreated = accountsCreated;
       job.accountsUpdated = accountsUpdated;
@@ -379,7 +531,12 @@ export class LunchMoneySyncService {
         transactionsCount: mappedTransactions.length,
         categoriesCount: mappedCategories.length,
         tagsCount: rawTags.length,
-        recurringCount: mappedRecurring.length
+        recurringCount: mappedRecurring.length,
+        uncategorizedFound: uncategorizedFoundCount,
+        categorizedCount,
+        pendingCount,
+        researchedCount,
+        writeBackCount
       };
 
       return {
@@ -393,7 +550,14 @@ export class LunchMoneySyncService {
         categoriesToPersist,
         tagsToPersist,
         transactionsToPersist,
-        user: userMeta
+        user: userMeta,
+        metrics: {
+          uncategorizedFound: uncategorizedFoundCount,
+          categorizedCount,
+          pendingCount,
+          researchedCount,
+          writeBackCount
+        }
       };
 
     } catch (error: any) {

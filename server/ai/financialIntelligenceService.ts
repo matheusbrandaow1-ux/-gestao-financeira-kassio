@@ -67,7 +67,7 @@ export class FinancialIntelligenceService {
         suggestedCategoryName: params.chosenCategoryName,
         suggestedSubcategoryName: params.chosenSubcategoryName,
         confidence: 99,
-        source: 'HISTORY_OVERRIDE',
+        source: 'HUMAN_CORRECTION',
         reasoning: `Classificação customizada definida pelo ${params.changedByRole === 'CONSULTANT' ? 'Consultor' : 'Cliente'}.`,
         lastCheckedAt: new Date().toISOString(),
         clientSpecificOverride: true,

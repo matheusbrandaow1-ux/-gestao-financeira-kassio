@@ -251,6 +251,7 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
     existingAccounts, 
     existingCategories, 
     existingTags, 
+    existingRules,
     existingRecurring 
   } = req.body || {};
   
@@ -282,6 +283,7 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
       existingAccounts,
       existingCategories,
       existingTags,
+      existingRules,
       existingRecurring
     });
 
@@ -291,7 +293,8 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
       success: isSuccess,
       data: result,
       job: result.job,
-      user: result.user
+      user: result.user,
+      metrics: result.metrics
     });
   } catch (err: any) {
     return res.status(500).json({
@@ -307,6 +310,50 @@ router.post('/cache/clear', requireConsultant, (req: Request, res: Response) => 
   const { clientId } = req.body || {};
   lunchMoneyCache.clear(clientId || 'kassio-pf');
   return res.json({ success: true, message: 'Cache limpo com sucesso.' });
+});
+
+// 9. Update Transaction in Lunch Money (write-back)
+router.put('/transaction/:id', requireAuth, async (req: Request, res: Response) => {
+  const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, req.body?.clientId as string);
+  if (!isAllowed) {
+    return res.status(403).json({
+      success: false,
+      code: 'FORBIDDEN',
+      message: 'Acesso não autorizado aos dados deste cliente.'
+    });
+  }
+
+  const token = LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId);
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Lunch Money não conectado para este cliente.'
+    });
+  }
+
+  const txId = req.params.id;
+  const { category_id, notes, tags, payee, status } = req.body || {};
+
+  try {
+    const client = new LunchMoneyClient(token);
+    const result = await client.updateTransaction(txId, {
+      category_id,
+      notes,
+      tags,
+      payee,
+      status
+    });
+
+    return res.json({
+      success: result.updated,
+      result
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Erro ao atualizar transação no Lunch Money.'
+    });
+  }
 });
 
 export default router;
