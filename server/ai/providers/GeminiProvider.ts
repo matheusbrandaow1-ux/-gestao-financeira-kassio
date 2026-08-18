@@ -17,6 +17,33 @@ import {
 } from '../types';
 import { aiMetricsStore } from '../metricsStore';
 
+const PRIMARY_MODEL = 'gemini-3.6-flash';
+
+async function executeGeminiWithRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelayMs = 1200): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      attempt++;
+      const status = err?.status || err?.code || (err?.message?.includes('429') ? 429 : 0);
+      const isTransient = status === 429 || status === 500 || status === 503 || status === 502 || status === 504 ||
+        err?.message?.includes('RESOURCE_EXHAUSTED') ||
+        err?.message?.includes('UNAVAILABLE') ||
+        err?.message?.includes('high demand') ||
+        err?.message?.includes('rate limit');
+
+      if (!isTransient || attempt > maxRetries) {
+        throw err;
+      }
+
+      const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 400;
+      console.warn(`[Gemini Retry] Tentativa ${attempt} falhou com status ${status} (${err?.message || 'transitório'}). Aguardando ${Math.round(delay)}ms para reexecução...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
 export class GeminiProvider implements AIProvider {
   public name = 'GEMINI';
   private ai: GoogleGenAI | null = null;
@@ -116,11 +143,32 @@ INSTRUÇÕES RIGOROSAS:
         config.tools = [{ googleSearch: {} }];
       }
 
-      const response = await client.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config
-      });
+      let response;
+      try {
+        response = await executeGeminiWithRetry(async () => {
+          return await client.models.generateContent({
+            model: PRIMARY_MODEL,
+            contents: prompt,
+            config
+          });
+        });
+      } catch (err: any) {
+        // If search grounding fails specifically due to tools quota, fallback to direct reasoning
+        if (useSearchGrounding && (err?.message?.includes('quota') || err?.status === 429)) {
+          console.warn('[Gemini Grounding Fallback] Ferramenta googleSearch atingiu cota. Recorrendo à inteligência direta do modelo...');
+          const fallbackConfig = { ...config };
+          delete fallbackConfig.tools;
+          response = await executeGeminiWithRetry(async () => {
+            return await client.models.generateContent({
+              model: PRIMARY_MODEL,
+              contents: prompt,
+              config: fallbackConfig
+            });
+          });
+        } else {
+          throw err;
+        }
+      }
 
       const responseText = response.text || '{}';
       let parsed: any = {};
@@ -189,8 +237,8 @@ INSTRUÇÕES RIGOROSAS:
         normalizedMerchant: transaction.merchant || transaction.description,
         canonicalMerchant: transaction.merchant || transaction.description,
         confidenceScore: 30,
-        reasoning: 'Não foi possível classificar automaticamente por IA.',
-        reasoningShort: 'IA indisponível ou inconclusiva.',
+        reasoning: `Erro no processamento IA (${error?.message || 'indisponível'}).`,
+        reasoningShort: `Falha na IA: ${error?.status || 'Erro'} - ${error?.message || 'Indisponível'}`,
         source: 'AI_REASONING',
         isAutoClassified: false,
         needsReview: true,
@@ -244,13 +292,15 @@ DIRETRIZES FUNDAMENTAIS:
         parts: [{ text: m.content }]
       }));
 
-      const response = await client.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents,
-        config: {
-          systemInstruction,
-          temperature: 0.4
-        }
+      const response = await executeGeminiWithRetry(async () => {
+        return await client.models.generateContent({
+          model: PRIMARY_MODEL,
+          contents,
+          config: {
+            systemInstruction,
+            temperature: 0.4
+          }
+        });
       });
 
       const reply = response.text || 'Não consegui processar a resposta no momento.';
@@ -258,7 +308,7 @@ DIRETRIZES FUNDAMENTAIS:
     } catch (err: any) {
       console.error('Erro no Chat Gemini:', err);
       return {
-        reply: `Desculpe, ocorreu uma instabilidade temporária na consulta de inteligência artificial. Verifique se há dados sincronizados no Lunch Money ou tente novamente em instantes.`
+        reply: `Erro de comunicação com o serviço Gemini (${err?.status || err?.code || 'Erro de Execução'}: ${err?.message || 'Falha temporária na API de IA'}). Detalhes: modelo ${PRIMARY_MODEL}.`
       };
     }
   }
@@ -325,29 +375,31 @@ INSTRUÇÕES:
     try {
       aiMetricsStore.incrementGeminiCalls();
 
-      const response = await client.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              highlights: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-                description: 'Lista de 2 a 4 insights curtos de 1 linha'
+      const response = await executeGeminiWithRetry(async () => {
+        return await client.models.generateContent({
+          model: PRIMARY_MODEL,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                highlights: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                  description: 'Lista de 2 a 4 insights curtos de 1 linha'
+                },
+                summaryParagraph: {
+                  type: Type.STRING,
+                  description: 'Parágrafo conciso de resumo do mês (máx 2 frases)'
+                },
+                savingsRateInsight: { type: Type.STRING },
+                budgetStatusInsight: { type: Type.STRING }
               },
-              summaryParagraph: {
-                type: Type.STRING,
-                description: 'Parágrafo conciso de resumo do mês (máx 2 frases)'
-              },
-              savingsRateInsight: { type: Type.STRING },
-              budgetStatusInsight: { type: Type.STRING }
-            },
-            required: ['highlights', 'summaryParagraph']
+              required: ['highlights', 'summaryParagraph']
+            }
           }
-        }
+        });
       });
 
       const parsed = JSON.parse(response.text || '{}');
@@ -442,12 +494,14 @@ Taxa de Poupança: ${savingsRateRealized.toFixed(1)}%
 Principais Categorias: ${JSON.stringify(sortedCats.slice(0, 5))}
 Perfil: ${role}`;
 
-        const resp = await client.models.generateContent({
-          model: 'gemini-3.7-flash',
-          contents: prompt,
-          config: {
-            systemInstruction: 'Escreva um parágrafo profissional e objetivo de 3 a 4 frases avaliando o desempenho financeiro do mês.'
-          }
+        const resp = await executeGeminiWithRetry(async () => {
+          return await client.models.generateContent({
+            model: PRIMARY_MODEL,
+            contents: prompt,
+            config: {
+              systemInstruction: 'Escreva um parágrafo profissional e objetivo de 3 a 4 frases avaliando o desempenho financeiro do mês.'
+            }
+          });
         });
         if (resp.text) {
           aiObs = resp.text.trim();
@@ -608,3 +662,4 @@ Perfil: ${role}`;
     return suggestions;
   }
 }
+

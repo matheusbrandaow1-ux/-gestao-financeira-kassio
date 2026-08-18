@@ -113,8 +113,8 @@ router.post('/chat', requireAuth, async (req: Request, res: Response) => {
     console.error('Erro no /api/ai/chat:', error?.message || error);
     return res.status(500).json({
       success: false,
-      message: 'Falha ao comunicar com o Assistente Financeiro.',
-      reply: 'Ocorreu uma instabilidade na consulta de inteligência artificial. Por favor, tente novamente.'
+      message: error?.message || 'Falha ao comunicar com o Assistente Financeiro.',
+      reply: `Erro ao comunicar com o modelo de inteligência artificial (${error?.status || 500}: ${error?.message || 'Falha no processamento'}).`
     });
   }
 });

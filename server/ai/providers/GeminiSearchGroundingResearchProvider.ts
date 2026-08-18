@@ -7,6 +7,33 @@ import {
 import { GroundingSource } from '../types';
 import { aiMetricsStore } from '../metricsStore';
 
+const PRIMARY_MODEL = 'gemini-3.6-flash';
+
+async function executeResearchWithRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelayMs = 1200): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      attempt++;
+      const status = err?.status || err?.code || (err?.message?.includes('429') ? 429 : 0);
+      const isTransient = status === 429 || status === 500 || status === 503 || status === 502 || status === 504 ||
+        err?.message?.includes('RESOURCE_EXHAUSTED') ||
+        err?.message?.includes('UNAVAILABLE') ||
+        err?.message?.includes('high demand') ||
+        err?.message?.includes('rate limit');
+
+      if (!isTransient || attempt > maxRetries) {
+        throw err;
+      }
+
+      const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 400;
+      console.warn(`[Merchant Research Retry] Tentativa ${attempt} falhou com status ${status}. Aguardando ${Math.round(delay)}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
 export class GeminiSearchGroundingResearchProvider implements MerchantResearchProvider {
   public name = 'GEMINI_SEARCH_GROUNDING';
   private ai: GoogleGenAI | null = null;
@@ -150,37 +177,69 @@ DIRETRIZES DE INVESTIGAÇÃO:
       aiMetricsStore.incrementGeminiCalls();
       aiMetricsStore.incrementGoogleSearches();
 
-      const response = await client.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }],
-          systemInstruction: 'Você é um auditor financeiro e pesquisador corporativo na Suíça. Analise evidências com rigor e responda exclusivamente em JSON válido.',
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              canonicalMerchant: { type: Type.STRING, description: 'Nome comercial canônico do estabelecimento' },
-              legalName: { type: Type.STRING, description: 'Razão social oficial (opcional)' },
-              merchantType: { type: Type.STRING, description: 'Tipo de atividade / segmento comercial' },
-              country: { type: Type.STRING, description: 'País do estabelecimento' },
-              city: { type: Type.STRING, description: 'Cidade do estabelecimento (se aplicável)' },
-              categoryId: { type: Type.STRING, description: 'ID da categoria escolhida estritamente da lista' },
-              categoryName: { type: Type.STRING, description: 'Nome da categoria' },
-              subcategoryName: { type: Type.STRING, description: 'Subcategoria sugerida (opcional)' },
-              transactionType: { 
-                type: Type.STRING, 
-                enum: ['DESPESA', 'RECEITA', 'INVESTIMENTO', 'TRANSFERENCIA', 'OUTROS'],
-                description: 'Tipo financeiro da transação' 
-              },
-              confidence: { type: Type.NUMBER, description: 'Score de confiança de 0 a 100' },
-              evidenceSummary: { type: Type.STRING, description: 'Resumo factual das evidências e fontes encontradas' },
-              reasoningShort: { type: Type.STRING, description: 'Justificativa concisa de 1 frase' }
+      const searchConfig: any = {
+        tools: [{ googleSearch: {} }],
+        systemInstruction: 'Você é um auditor financeiro e pesquisador corporativo na Suíça. Analise evidências com rigor e responda exclusivamente em JSON válido.',
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            canonicalMerchant: { type: Type.STRING, description: 'Nome comercial canônico do estabelecimento' },
+            legalName: { type: Type.STRING, description: 'Razão social oficial (opcional)' },
+            merchantType: { type: Type.STRING, description: 'Tipo de atividade / segmento comercial' },
+            country: { type: Type.STRING, description: 'País do estabelecimento' },
+            city: { type: Type.STRING, description: 'Cidade do estabelecimento (se aplicável)' },
+            categoryId: { type: Type.STRING, description: 'ID da categoria escolhida estritamente da lista' },
+            categoryName: { type: Type.STRING, description: 'Nome da categoria' },
+            subcategoryName: { type: Type.STRING, description: 'Subcategoria sugerida (opcional)' },
+            transactionType: { 
+              type: Type.STRING, 
+              enum: ['DESPESA', 'RECEITA', 'INVESTIMENTO', 'TRANSFERENCIA', 'OUTROS'],
+              description: 'Tipo financeiro da transação' 
             },
-            required: ['canonicalMerchant', 'merchantType', 'categoryId', 'confidence', 'evidenceSummary', 'reasoningShort']
-          }
+            confidence: { type: Type.NUMBER, description: 'Score de confiança de 0 a 100' },
+            evidenceSummary: { type: Type.STRING, description: 'Resumo factual das evidências e fontes encontradas' },
+            reasoningShort: { type: Type.STRING, description: 'Justificativa concisa de 1 frase' }
+          },
+          required: ['canonicalMerchant', 'merchantType', 'categoryId', 'confidence', 'evidenceSummary', 'reasoningShort']
         }
-      });
+      };
+
+      let response;
+      try {
+        // First try with googleSearch tool (single attempt to detect tool quota without wasting retries)
+        response = await client.models.generateContent({
+          model: PRIMARY_MODEL,
+          contents: prompt,
+          config: searchConfig
+        });
+      } catch (err: any) {
+        const isQuotaOr429 = err?.status === 429 || 
+          err?.message?.includes('quota') || 
+          err?.message?.includes('RESOURCE_EXHAUSTED') ||
+          err?.message?.includes('Tool');
+
+        if (isQuotaOr429) {
+          const fallbackConfig = { ...searchConfig };
+          delete fallbackConfig.tools;
+          response = await executeResearchWithRetry(async () => {
+            return await client.models.generateContent({
+              model: PRIMARY_MODEL,
+              contents: prompt,
+              config: fallbackConfig
+            });
+          });
+        } else {
+          // Retry standard transient network errors
+          response = await executeResearchWithRetry(async () => {
+            return await client.models.generateContent({
+              model: PRIMARY_MODEL,
+              contents: prompt,
+              config: searchConfig
+            });
+          });
+        }
+      }
 
       const responseText = response.text || '{}';
       let parsed: any = {};
