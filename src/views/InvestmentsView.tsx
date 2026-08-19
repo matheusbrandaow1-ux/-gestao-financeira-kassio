@@ -34,6 +34,7 @@ import { useClient } from '../context/ClientContext';
 import { AssetOrLiability, InvestmentPortfolio, InvestmentHolding, CurrencyCode } from '../types';
 import { formatCurrency, formatPercent } from '../lib/money';
 import { fxService } from '../lib/fxService';
+import { getDefaultPortfolios } from '../lib/investmentData';
 
 const ALLOCATION_COLORS = ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EC4899', '#8B5CF6'];
 
@@ -84,8 +85,10 @@ export const InvestmentsView: React.FC = () => {
       }
     });
 
-    return Array.from(portfoliosByInstitution.values());
-  }, [assets]);
+    return portfoliosByInstitution.size > 0
+      ? Array.from(portfoliosByInstitution.values())
+      : getDefaultPortfolios(activeClient.id);
+  }, [activeClient.id, assets]);
   const [selectedCurrencyFilter, setSelectedCurrencyFilter] = useState<'ALL' | CurrencyCode>('ALL');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingHolding, setEditingHolding] = useState<InvestmentHolding | null>(null);
