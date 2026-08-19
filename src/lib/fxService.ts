@@ -64,7 +64,7 @@ class FXService {
 
   public setProviderRate(currency: string, rateToCHF: number, timestamp: string = new Date().toISOString()): void {
     const code = currency.toUpperCase();
-    if (rateToCHF > 0) {
+    if (rateToCHF > 0 && Number.isFinite(rateToCHF)) {
       this.ratesToCHF[code] = rateToCHF;
       this.lastUpdated = timestamp;
       this.source = 'PROVIDER';
@@ -73,7 +73,7 @@ class FXService {
 
   public setCachedRate(currency: string, rateToCHF: number, timestamp: string): void {
     const code = currency.toUpperCase();
-    if (rateToCHF > 0) {
+    if (rateToCHF > 0 && Number.isFinite(rateToCHF)) {
       this.ratesToCHF[code] = rateToCHF;
       this.lastUpdated = timestamp;
       this.source = 'CACHED';
@@ -83,6 +83,21 @@ class FXService {
   public setCustomRate(currency: string, rateToCHF: number): void {
     this.setCachedRate(currency, rateToCHF, new Date().toISOString());
   }
+}
+
+export interface PersistedFXRate {
+  baseCurrency: string;
+  quoteCurrency: string;
+  rate: number;
+  timestamp: string;
+  source: string;
+  status: string;
+}
+
+export function applyPersistedRates(rates: PersistedFXRate[]): void {
+  rates
+    .filter(rate => rate.quoteCurrency.toUpperCase() === 'CHF' && rate.status === 'VALID')
+    .forEach(rate => fxService.setCachedRate(rate.baseCurrency, rate.rate, rate.timestamp));
 }
 
 export const fxService = FXService.getInstance();

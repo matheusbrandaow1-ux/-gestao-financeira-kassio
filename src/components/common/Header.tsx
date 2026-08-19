@@ -47,26 +47,26 @@ export const Header: React.FC<HeaderProps> = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 text-slate-100 px-4 sm:px-6 py-3 transition-colors">
+    <header className="wealth-header sticky top-0 z-30 backdrop-blur border-b text-slate-100 px-4 sm:px-6 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         
         {/* Left: Active Client Callout (Strictly Visible and Prominent) */}
         <div className="flex items-center gap-3">
-          <div className="relative flex items-center gap-2.5 px-3.5 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-500/40 shadow-sm">
+          <div className="relative flex items-center gap-2.5 px-1 py-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <div className="flex flex-col">
-              <span className="text-[10px] tracking-wider uppercase font-semibold text-emerald-400">
+              <span className="text-[10px] tracking-[0.18em] uppercase font-semibold text-emerald-300">
                 {isConsultant ? 'Cliente Selecionado' : 'Meu Planejamento'}
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-100">
                   {activeClient.name}
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-bold text-emerald-300">
                   {activeClient.baseCurrency}
                 </span>
-                <span className="text-xs text-slate-400 hidden sm:inline">
-                  🇨🇭 {activeClient.residenceCountry}
+                    <span className="text-xs text-slate-400 hidden sm:inline">
+                  {activeClient.residenceCountry}
                 </span>
               </div>
             </div>
@@ -97,7 +97,7 @@ export const Header: React.FC<HeaderProps> = () => {
                           setShowClientDropdown(false);
                         }}
                         className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-800 ${
-                          c.id === activeClient.id ? 'text-blue-400 font-semibold bg-slate-800/60' : 'text-slate-300'
+                          c.id === activeClient.id ? 'text-emerald-300 font-semibold bg-slate-800/60' : 'text-slate-300'
                         }`}
                       >
                         <span>{c.name}</span>
@@ -120,7 +120,7 @@ export const Header: React.FC<HeaderProps> = () => {
         <div className="flex items-center flex-wrap gap-2.5 sm:gap-3">
           
           {/* Lunch Money Sync Status Badge (Available for BOTH Consultant and Client) */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/70 text-xs">
+          <div className="flex items-center gap-2 px-1 py-1.5 text-xs">
             {isSyncing ? (
               <RefreshCw className="w-3.5 h-3.5 text-amber-400 animate-spin" />
             ) : syncStatus === 'Sincronizado' || syncStatus === 'Conectado' ? (
@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = () => {
             <div className="flex flex-col text-[11px] leading-tight">
               <div className="flex items-center gap-1.5 font-medium text-slate-300">
                 <span>{isConsultant ? 'Lunch Money:' : 'Dados Bancários:'}</span>
-                <span className={syncStatus === 'Sincronizado' || syncStatus === 'Conectado' ? 'text-emerald-400 font-semibold' : 'text-slate-400'}>
+                <span className={syncStatus === 'Sincronizado' || syncStatus === 'Conectado' ? 'text-emerald-300 font-semibold' : 'text-slate-400'}>
                   {isSyncing ? 'Sincronizando...' : syncStatus}
                 </span>
               </div>
@@ -150,7 +150,7 @@ export const Header: React.FC<HeaderProps> = () => {
               onClick={handleSyncClick}
               disabled={isSyncing}
               title={isConsultant ? 'Sincronizar com Lunch Money' : 'Atualizar meus dados bancários'}
-              className="ml-1 p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+              className="ml-1 p-2 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-400' : ''}`} />
             </button>
@@ -159,12 +159,12 @@ export const Header: React.FC<HeaderProps> = () => {
           {/* Authentic Role Badge (strictly sourced from authenticated user, no switcher) */}
           <div className="flex items-center">
             {isConsultant ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
                 <span>CONSULTOR</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300">
                 <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>CLIENTE PF</span>
               </span>
@@ -174,7 +174,7 @@ export const Header: React.FC<HeaderProps> = () => {
           {/* User Profile info */}
           <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-inner text-white ${
-              isConsultant ? 'bg-gradient-to-tr from-blue-600 to-indigo-600' : 'bg-gradient-to-tr from-emerald-600 to-teal-600'
+              isConsultant ? 'bg-emerald-800' : 'bg-emerald-700'
             }`}>
               {user?.displayName ? user.displayName.charAt(0).toUpperCase() : (isConsultant ? 'C' : 'K')}
             </div>
@@ -193,7 +193,7 @@ export const Header: React.FC<HeaderProps> = () => {
             type="button"
             onClick={handleLogout}
             title="Sair da Conta"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 hover:border-rose-500/40 border border-slate-700/70 text-xs font-medium transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-transparent hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-transparent text-xs font-medium transition-all"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Sair</span>

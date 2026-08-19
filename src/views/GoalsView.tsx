@@ -148,17 +148,17 @@ export const GoalsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="wealth-view space-y-8 pb-12">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
             <span>Objetivos & Metas de Vida</span>
             <span>•</span>
             <span>{activeClient.name}</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-100 mt-1">
+          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Planejamento de Objetivos Financeiros
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">

@@ -18,6 +18,7 @@ import { db, doc, getDoc, setDoc, collection, getDocs, deleteDoc, writeBatch } f
 import { applyRulesToTransaction } from '../lib/rulesEngine';
 import { useAuth } from './AuthContext';
 import { getCurrentMonth } from '../lib/monthUtils';
+import { applyPersistedRates } from '../lib/fxService';
 
 export const REAL_KASSIO_CLIENT: ClientProfile = {
   id: 'kassio-pf',
@@ -172,6 +173,16 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsLoading(true);
       try {
         const targetId = isClientRole ? (authClientId || 'kassio-pf') : (activeClient.id || 'kassio-pf');
+
+        try {
+          const fxResponse = await fetch(`/api/lunchmoney/fx-rates?clientId=${encodeURIComponent(targetId)}`);
+          if (fxResponse.ok) {
+            const fxData = await fxResponse.json();
+            applyPersistedRates(fxData.rates || []);
+          }
+        } catch {
+          // FX is optional and never blocks loading financial data.
+        }
 
         // 1. Load available clients list
         let loadedClients: ClientProfile[] = [REAL_KASSIO_CLIENT];
@@ -986,6 +997,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (resData.success && resData.data) {
         const syncData = resData.data;
         const job: SyncJob = syncData.job || resData.job;
+        applyPersistedRates(resData.fxRates || []);
 
         // Persist to Firestore
         try {

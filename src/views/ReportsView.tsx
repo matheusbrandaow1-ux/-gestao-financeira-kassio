@@ -155,7 +155,7 @@ export const ReportsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12 print:bg-white print:text-black">
+    <div className="wealth-view space-y-8 pb-12 print:bg-white print:text-black">
       {/* Header & Filter Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
         <div>

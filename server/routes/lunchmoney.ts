@@ -4,6 +4,7 @@ import { LunchMoneySyncService } from '../integrations/lunchmoney/sync';
 import { lunchMoneyCache } from '../integrations/lunchmoney/cache';
 import { LunchMoneyIntegrationStore } from '../integrations/lunchmoney/store';
 import { LunchMoneyTestClient } from '../integrations/lunchmoney/testClient';
+import { fxRateService } from '../integrations/fxService';
 import { requireAuth, requireConsultant, resolveAuthorizedClientId } from './auth';
 
 const router = Router();
@@ -268,6 +269,19 @@ router.post('/sync', requireConsultant, async (req: Request, res: Response) => {
       existingRecurring
     });
 
+    let fxRates = [];
+    if (result.job.status === 'SUCCESS' || result.job.status === 'SINCRONIZADO') {
+      const currencies = [
+        ...result.accounts.map(account => account.currency),
+        ...result.transactions.map(transaction => transaction.currency)
+      ];
+      try {
+        fxRates = await fxRateService.refreshForClient(authorizedClientId, currencies);
+      } catch (fxError) {
+        console.warn('[FX] Atualização pós-sync ignorada; sincronização preservada.', fxError);
+      }
+    }
+
     const isSuccess = result.job.status === 'SUCCESS' || result.job.status === 'SINCRONIZADO';
 
     return res.json({
@@ -275,7 +289,8 @@ router.post('/sync', requireConsultant, async (req: Request, res: Response) => {
       data: result,
       job: result.job,
       user: result.user,
-      metrics: result.metrics
+      metrics: result.metrics,
+      fxRates
     });
   } catch (err: any) {
     return res.status(500).json({
@@ -283,6 +298,18 @@ router.post('/sync', requireConsultant, async (req: Request, res: Response) => {
       code: 'SYNC_FAILED',
       message: 'Erro interno durante sincronização.'
     });
+  }
+});
+
+router.get('/fx-rates', requireAuth, async (req: Request, res: Response) => {
+  const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, req.query.clientId as string);
+  if (!isAllowed) return res.status(403).json({ success: false, code: 'FORBIDDEN' });
+
+  try {
+    const rates = await fxRateService.getRates(authorizedClientId);
+    return res.json({ success: true, rates });
+  } catch {
+    return res.json({ success: true, rates: [] });
   }
 });
 

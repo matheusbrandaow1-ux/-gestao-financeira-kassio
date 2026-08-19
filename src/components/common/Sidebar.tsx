@@ -64,19 +64,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
     icon: React.FC<{ className?: string }>; 
     badge?: number;
     consultantOnly?: boolean;
-    section?: 'main' | 'admin';
+    section?: 'planning' | 'patrimony' | 'admin';
   }> = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'main' },
-    { id: 'ai-assistant', label: 'Assistente IA', icon: Sparkles, section: 'main' },
-    { id: 'transactions', label: 'Transações', icon: ArrowLeftRight, section: 'main' },
-    { id: 'planning', label: 'Planejamento', icon: CalendarRange, section: 'main' },
-    { id: 'investments', label: 'Investimentos', icon: Coins, section: 'main' },
-    { id: 'categories', label: 'Categorias', icon: Tags, section: 'main' },
-    { id: 'goals', label: 'Objetivos', icon: Target, section: 'main' },
-    { id: 'assets', label: 'Patrimônio', icon: Landmark, section: 'main' },
-    { id: 'accounts', label: 'Contas', icon: Wallet, section: 'main' },
-    { id: 'recurrences', label: 'Recorrências', icon: Repeat, section: 'main' },
-    { id: 'reports', label: 'Relatórios', icon: BarChart3, section: 'main' },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'planning' },
+    { id: 'ai-assistant', label: 'Assistente IA', icon: Sparkles, section: 'planning' },
+    { id: 'transactions', label: 'Transações', icon: ArrowLeftRight, section: 'planning' },
+    { id: 'planning', label: 'Planejamento', icon: CalendarRange, section: 'planning' },
+    { id: 'investments', label: 'Investimentos', icon: Coins, section: 'patrimony' },
+    { id: 'categories', label: 'Categorias', icon: Tags, section: 'patrimony' },
+    { id: 'goals', label: 'Objetivos', icon: Target, section: 'patrimony' },
+    { id: 'assets', label: 'Patrimônio', icon: Landmark, section: 'patrimony' },
+    { id: 'accounts', label: 'Contas', icon: Wallet, section: 'patrimony' },
+    { id: 'recurrences', label: 'Recorrências', icon: Repeat, section: 'patrimony' },
+    { id: 'reports', label: 'Relatórios', icon: BarChart3, section: 'patrimony' },
     
     // Consultant administrative items
     { id: 'pending', label: 'Pendências', icon: Inbox, badge: pendingCount, consultantOnly: true, section: 'admin' },
@@ -91,7 +91,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return true;
   });
 
-  const mainItems = visibleNavItems.filter(i => i.section === 'main');
   const adminItems = visibleNavItems.filter(i => i.section === 'admin');
 
   return (
@@ -105,14 +104,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside className={`
-        fixed top-0 bottom-0 left-0 z-50 w-64 bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-200 ease-in-out
+        wealth-sidebar fixed top-0 bottom-0 left-0 z-50 w-64 border-r flex flex-col transition-transform duration-200 ease-in-out
         lg:translate-x-0 lg:static lg:z-0
         ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Brand Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-lg shadow-blue-900/30">
+            <div className="w-9 h-9 rounded-lg bg-emerald-800 flex items-center justify-center text-white">
               <Briefcase className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
@@ -138,12 +137,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
           
           {/* Main Section */}
-          <div className="space-y-1">
-            <div className="px-3 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              {isConsultant ? 'Planejamento do Cliente' : 'Meu Planejamento'}
+          {(['planning', 'patrimony'] as const).map(section => {
+            const sectionItems = visibleNavItems.filter(i => i.section === section);
+            const sectionLabel = section === 'planning'
+              ? (isConsultant ? 'Planejamento do Cliente' : 'Planejamento')
+              : 'Patrimônio';
+            return <div key={section} className="space-y-1">
+            <div className="px-3 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-[0.18em]">
+              {sectionLabel}
             </div>
 
-            {mainItems.map((item) => {
+            {sectionItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
 
@@ -155,15 +159,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     if (onCloseMobile) onCloseMobile();
                   }}
                   className={`
-                    w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group
+                    w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-all group
                     ${isActive 
-                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/20 font-semibold' 
+                      ? 'bg-emerald-900/60 text-emerald-100 shadow-sm font-semibold'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                    <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-emerald-300' : 'text-slate-400 group-hover:text-slate-200'}`} />
                     <span>{item.label}</span>
                   </div>
 
@@ -171,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span className={`
                       px-2 py-0.5 rounded-full text-[10px] font-bold font-mono
                       ${isActive 
-                        ? 'bg-white text-blue-700' 
+                        ? 'bg-emerald-200 text-emerald-950'
                         : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                       }
                     `}>
@@ -181,13 +185,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               );
             })}
-          </div>
+          </div>;
+          })}
 
           {/* Admin Section (Consultant Only) */}
           {isConsultant && adminItems.length > 0 && (
             <div className="space-y-1 pt-2 border-t border-slate-800/60">
-              <div className="px-3 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                Administração & Regras
+              <div className="px-3 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-[0.18em]">
+                Administração
               </div>
 
               {adminItems.map((item) => {
@@ -202,15 +207,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       if (onCloseMobile) onCloseMobile();
                     }}
                     className={`
-                      w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group
+                      w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-all group
                       ${isActive 
-                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/20 font-semibold' 
+                        ? 'bg-emerald-900/60 text-emerald-100 shadow-sm font-semibold'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                       }
                     `}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                      <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-emerald-300' : 'text-slate-400 group-hover:text-slate-200'}`} />
                       <span>{item.label}</span>
                     </div>
 
@@ -218,7 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span className={`
                         px-2 py-0.5 rounded-full text-[10px] font-bold font-mono
                         ${isActive 
-                          ? 'bg-white text-blue-700' 
+                          ? 'bg-emerald-200 text-emerald-950'
                           : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                         }
                       `}>

@@ -473,7 +473,7 @@ export class LunchMoneySyncService {
                 tx.merchant = result.canonicalMerchant;
               }
 
-              const isAuto = result.isAutoClassified || result.confidenceScore >= 70;
+              const isAuto = result.isAutoClassified && result.confidenceScore >= 90;
               tx.reviewStatus = result.source === 'DETERMINISTIC_RULE' 
                 ? 'AUTO_REGRAS' 
                 : (isAuto ? 'AI_CLASSIFIED' : 'PENDENTE');

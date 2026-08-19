@@ -36,7 +36,7 @@ import { formatCurrency, formatPercent } from '../lib/money';
 import { fxService } from '../lib/fxService';
 import { getDefaultPortfolios } from '../lib/investmentData';
 
-const ALLOCATION_COLORS = ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EC4899', '#8B5CF6'];
+const ALLOCATION_COLORS = ['#34D399', '#F59E0B', '#FB7185', '#A3E635', '#F97316', '#94A3B8'];
 
 export const InvestmentsView: React.FC = () => {
   const { activeClient, assets } = useClient();
@@ -120,12 +120,16 @@ export const InvestmentsView: React.FC = () => {
         holdings: holdingsWithCHF
       };
     });
-  }, [portfolios]);
+  }, [portfolios, fxTable.lastUpdated]);
 
   // Aggregate Metrics in CHF
   const totalInvestedCHF = useMemo(() => {
     return enrichedPortfolios.reduce((sum, p) => sum + p.totalValueCHF, 0);
   }, [enrichedPortfolios]);
+
+  const hasCompleteFX = enrichedPortfolios.every(portfolio =>
+    portfolio.holdings.every(holding => holding.currency === 'CHF' || fxService.hasRateToCHF(holding.currency))
+  );
 
   // Specific portfolio values
   const brlPortfolio = enrichedPortfolios.find(p => p.currency === 'BRL');
@@ -174,18 +178,18 @@ export const InvestmentsView: React.FC = () => {
   }, [enrichedPortfolios, selectedCurrencyFilter]);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="wealth-view space-y-8 pb-12">
       
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
             <span>Gestão de Investimentos Globais</span>
             <span>•</span>
             <span>Residência Fiscal: {activeClient.residenceCountry}</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-100 mt-1">
-            Carteiras & Portfólio Multi-Moeda
+          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
+            Carteira & Patrimônio Investido
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Monitoramento consolidado de ativos no Brasil (BRL), Europa (EUR) e Suíça (CHF) com conversão cambial dinâmica para {baseCurrency}.
@@ -197,16 +201,16 @@ export const InvestmentsView: React.FC = () => {
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
             <Globe2 className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-slate-400">EUR/CHF:</span>
-            <span className="font-semibold text-slate-200">{fxTable.rates['EUR']}</span>
+            <span className="font-semibold text-slate-200">{fxService.hasRateToCHF('EUR') ? fxTable.rates['EUR'] : 'indisponível'}</span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
             <span className="text-emerald-400 font-bold">R$</span>
             <span className="text-slate-400">BRL/CHF:</span>
-            <span className="font-semibold text-slate-200">{fxTable.rates['BRL']}</span>
+            <span className="font-semibold text-slate-200">{fxService.hasRateToCHF('BRL') ? fxTable.rates['BRL'] : 'indisponível'}</span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-xs text-emerald-300">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{fxTable.source === 'PROVIDER' ? 'FX do provedor' : fxTable.source === 'CACHED' ? 'FX em cache' : 'FX fallback'}</span>
+            <span>{fxTable.source === 'PROVIDER' ? 'FX do provedor' : fxTable.source === 'CACHED' ? 'FX em cache' : 'FX indisponível'}</span>
           </div>
           <span className="text-[10px] text-slate-500">Atualizada em: {fxTable.source === 'FALLBACK' ? 'sem provedor' : new Date(fxTable.lastUpdated).toLocaleString('pt-BR')}</span>
         </div>
@@ -216,28 +220,28 @@ export const InvestmentsView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Total Invested (CHF) */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 relative overflow-hidden shadow-sm">
+        <div className="wealth-finance-summary border-l-2 border-emerald-400/70 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Total Investido Consolidado
             </span>
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-300">
               <Landmark className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-100">
-              {formatCurrency(totalInvestedCHF, baseCurrency)}
+              {hasCompleteFX ? formatCurrency(totalInvestedCHF, baseCurrency) : 'Conversão CHF indisponível'}
             </div>
             <div className="text-xs text-emerald-400 flex items-center gap-1 mt-1 font-medium">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>100% dos ativos em custódia</span>
+              <span>{hasCompleteFX ? '100% dos ativos em custódia' : 'Alocação consolidada aguardando FX'}</span>
             </div>
           </div>
         </div>
 
         {/* BRL Portfolio */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="wealth-finance-summary border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Carteira Brasil (BRL)
@@ -248,7 +252,7 @@ export const InvestmentsView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-100">
-              R$ {brlPortfolio?.totalValueOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {brlPortfolio ? `R$ ${brlPortfolio.totalValueOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Sem posição BRL'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
               <span>{fxService.hasRateToCHF('BRL') ? `Eq. ${formatCurrency(brlPortfolio?.totalValueCHF || 0, baseCurrency)}` : 'Conversão indisponível'}</span>
@@ -258,7 +262,7 @@ export const InvestmentsView: React.FC = () => {
         </div>
 
         {/* EUR Portfolio */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="wealth-finance-summary border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               ETFs Globais (EUR)
@@ -269,7 +273,7 @@ export const InvestmentsView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-100">
-              € {eurPortfolio?.totalValueOriginal.toLocaleString('de-CH', { minimumFractionDigits: 2 })}
+              {eurPortfolio ? `€ ${eurPortfolio.totalValueOriginal.toLocaleString('de-CH', { minimumFractionDigits: 2 })}` : 'Sem posição EUR'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
               <span>{fxService.hasRateToCHF('EUR') ? `Eq. ${formatCurrency(eurPortfolio?.totalValueCHF || 0, baseCurrency)}` : 'Conversão indisponível'}</span>
@@ -282,7 +286,7 @@ export const InvestmentsView: React.FC = () => {
         </div>
 
         {/* Swiss Pillar 3a (CHF) */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="wealth-finance-summary border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Previdência 3a (CHF)
@@ -293,7 +297,7 @@ export const InvestmentsView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-100">
-              {formatCurrency(chfPortfolio?.totalValueOriginal || 0, 'CHF')}
+              {chfPortfolio ? formatCurrency(chfPortfolio.totalValueOriginal, 'CHF') : 'Sem posição CHF'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
               <span>VIAC / 3a Global</span>
@@ -308,11 +312,12 @@ export const InvestmentsView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Asset Class Allocation Chart */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="wealth-section border-b border-slate-800/80 pb-6">
           <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
-            <PieIcon className="w-4 h-4 text-blue-400" />
+            <PieIcon className="w-4 h-4 text-emerald-300" />
             <span>Alocação por Classe de Ativo (CHF)</span>
           </h2>
+          {hasCompleteFX ? <>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -345,15 +350,16 @@ export const InvestmentsView: React.FC = () => {
               </div>
             ))}
           </div>
+          </> : <div className="h-48 flex items-center justify-center text-center text-xs text-amber-300 border-y border-slate-800/70">Conversão CHF indisponível.<br />A alocação será exibida quando houver taxa válida.</div>}
         </div>
 
         {/* Currency Exposure Breakdown */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="wealth-section border-b border-slate-800/80 pb-6">
           <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
             <Globe2 className="w-4 h-4 text-emerald-400" />
             <span>Exposição Cambial Global</span>
           </h2>
-          <div className="h-48">
+          {hasCompleteFX ? <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={currencyBreakdownData} layout="vertical" margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
                 <XAxis type="number" hide />
@@ -372,7 +378,7 @@ export const InvestmentsView: React.FC = () => {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </div> : <div className="h-48 flex items-center justify-center text-center text-xs text-amber-300 border-y border-slate-800/70">Conversão CHF indisponível.<br />Valores originais permanecem preservados.</div>}
           <div className="space-y-1.5 mt-3 pt-3 border-t border-slate-800 text-xs">
             {currencyBreakdownData.map(c => (
               <div key={c.name} className="flex items-center justify-between text-slate-300">
@@ -385,7 +391,7 @@ export const InvestmentsView: React.FC = () => {
         </div>
 
         {/* Strategy & Swiss Tax Shield */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div className="wealth-section border-b border-slate-800/80 pb-6 flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-indigo-400" />
@@ -409,14 +415,14 @@ export const InvestmentsView: React.FC = () => {
 
           <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
             <span>Base de cálculo patrimonial:</span>
-            <span className="font-bold text-slate-200">{formatCurrency(totalInvestedCHF, 'CHF')}</span>
+            <span className="font-bold text-slate-200">{hasCompleteFX ? formatCurrency(totalInvestedCHF, 'CHF') : 'Conversão indisponível'}</span>
           </div>
         </div>
 
       </div>
 
       {/* Holdings Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+      <div className="wealth-table border-y border-slate-800/80 overflow-hidden">
         
         {/* Table Header Controls */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -437,7 +443,7 @@ export const InvestmentsView: React.FC = () => {
                 onClick={() => setSelectedCurrencyFilter(curr)}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
                   selectedCurrencyFilter === curr 
-                    ? 'bg-blue-600 text-white shadow-sm' 
+                    ? 'bg-emerald-800 text-emerald-50 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >

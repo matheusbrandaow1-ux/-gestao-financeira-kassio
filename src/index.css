@@ -1,1 +1,242 @@
 @import "tailwindcss";
+
+:root {
+	color-scheme: dark;
+	--wealth-bg: #0c1112;
+	--wealth-surface: #12191a;
+	--wealth-surface-raised: #182122;
+	--wealth-line: rgba(157, 174, 172, 0.14);
+	--wealth-jade: #2f7d68;
+	--wealth-jade-bright: #65b59a;
+	--wealth-positive: #79c69a;
+	--wealth-negative: #e1847e;
+	--wealth-warning: #d4ad68;
+	--wealth-text: #f0f3ef;
+	--wealth-secondary: #a7b2b0;
+	--wealth-muted: #71807e;
+}
+
+html {
+	background: var(--wealth-bg);
+}
+
+body {
+	margin: 0;
+	background: var(--wealth-bg);
+	color: var(--wealth-text);
+	font-family: Georgia, 'Times New Roman', serif;
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+	outline: 2px solid var(--wealth-jade-bright);
+	outline-offset: 3px;
+}
+
+.wealth-shell {
+	background:
+		radial-gradient(circle at 82% -10%, rgba(47, 125, 104, 0.12), transparent 28rem),
+		var(--wealth-bg);
+}
+
+.wealth-sidebar {
+	background: rgba(12, 17, 18, 0.96);
+	border-color: var(--wealth-line);
+}
+
+.wealth-header {
+	background: rgba(12, 17, 18, 0.88);
+	border-color: var(--wealth-line);
+}
+
+.wealth-title,
+.wealth-display,
+.wealth-number {
+	font-family: Georgia, 'Times New Roman', serif;
+	font-variant-numeric: tabular-nums;
+}
+
+.wealth-number {
+	letter-spacing: 0.015em;
+}
+
+/* Shared visual language for existing views. */
+body .bg-slate-950 {
+	background-color: var(--wealth-bg);
+}
+
+body .bg-slate-900,
+body .bg-slate-900\/90,
+body .bg-slate-900\/95 {
+	background-color: var(--wealth-surface);
+}
+
+body .bg-slate-800\/60,
+body .bg-slate-800\/80,
+body .bg-slate-800\/90 {
+	background-color: var(--wealth-surface-raised);
+}
+
+body .border-slate-800,
+body .border-slate-800\/60,
+body .border-slate-800\/70,
+body .border-slate-800\/80,
+body .border-slate-700\/60,
+body .border-slate-700\/70,
+body .border-slate-700\/80 {
+	border-color: var(--wealth-line);
+}
+
+body .text-blue-300,
+body .text-blue-400,
+body .text-blue-500 {
+	color: var(--wealth-jade-bright);
+}
+
+body .bg-blue-600,
+body .bg-blue-500,
+body .bg-blue-500\/10,
+body .bg-blue-500\/15 {
+	background-color: var(--wealth-jade);
+}
+
+body .border-blue-500\/20,
+body .border-blue-500\/30,
+body .border-blue-500\/40 {
+	border-color: rgba(101, 181, 154, 0.35);
+}
+
+body .shadow-blue-900\/20,
+body .shadow-blue-900\/30 {
+	--tw-shadow-color: rgba(47, 125, 104, 0.18);
+}
+
+body .rounded-xl {
+	border-radius: 0.65rem;
+}
+
+body .text-slate-400 {
+	color: var(--wealth-secondary);
+}
+
+body .text-slate-500,
+body .text-slate-600 {
+	color: var(--wealth-muted);
+}
+
+body .text-emerald-300,
+body .text-emerald-400 {
+	color: var(--wealth-positive);
+}
+
+body .text-rose-300,
+body .text-rose-400 {
+	color: var(--wealth-negative);
+}
+
+body .text-amber-300,
+body .text-amber-400 {
+	color: var(--wealth-warning);
+}
+
+body input,
+body select,
+body textarea {
+	border-color: var(--wealth-line);
+}
+
+body input:focus,
+body select:focus,
+body textarea:focus {
+	border-color: var(--wealth-jade);
+	box-shadow: 0 0 0 1px var(--wealth-jade);
+}
+
+.wealth-page-header h1,
+.wealth-page-header p,
+.wealth-section h2,
+.wealth-taxonomy h2 {
+	letter-spacing: 0;
+}
+
+.wealth-toolbar input,
+.wealth-toolbar select,
+.wealth-toolbar button,
+.wealth-page-header button {
+	min-height: 40px;
+}
+
+.wealth-table table {
+	border-collapse: collapse;
+}
+
+.wealth-table th {
+	white-space: nowrap;
+	letter-spacing: 0.12em;
+}
+
+.wealth-table td,
+.wealth-table th {
+	font-variant-numeric: tabular-nums;
+}
+
+.wealth-table tbody tr {
+	min-height: 56px;
+}
+
+@media (max-width: 767px) {
+	.wealth-view {
+		padding-bottom: 2rem;
+	}
+
+	.wealth-page-header {
+		align-items: flex-start;
+	}
+
+	.wealth-page-header h1 {
+		line-height: 1.15;
+	}
+
+	.wealth-toolbar {
+		align-items: stretch;
+	}
+
+	.wealth-toolbar > * {
+		max-width: 100%;
+	}
+
+	.wealth-table {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.wealth-table table {
+		min-width: 760px;
+	}
+
+	.wealth-table td,
+	.wealth-table th {
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+	}
+
+	.wealth-taxonomy > div {
+		min-width: 0;
+	}
+}
+
+@media (max-width: 640px) {
+	.wealth-display {
+		font-size: clamp(2rem, 11vw, 3rem);
+	}
+}

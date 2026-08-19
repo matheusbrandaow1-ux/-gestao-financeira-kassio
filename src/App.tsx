@@ -107,7 +107,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+    <div className="wealth-shell min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-emerald-700 selection:text-white">
       {/* Top sticky Header */}
       <Header />
 
@@ -125,14 +125,14 @@ const AppContent: React.FC = () => {
         />
 
         {/* Primary View Container */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 max-w-7xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 max-w-[1440px] mx-auto w-full">
           {/* Mobile Menu trigger bar */}
           <div className="lg:hidden flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-800 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-md bg-slate-900/80 border border-slate-800 text-xs font-semibold text-slate-200 hover:bg-slate-800 transition-colors"
             >
-              <Menu className="w-4 h-4 text-blue-400" />
+              <Menu className="w-4 h-4 text-emerald-300" />
               <span>Menu</span>
             </button>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
