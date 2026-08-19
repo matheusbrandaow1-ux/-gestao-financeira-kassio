@@ -242,23 +242,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   const pendingUnresolved = pendingItems.filter(p => !p.isResolved);
   const uncategorizedCount = currentMonthTransactions.filter(t => !t.categoryId || t.categoryId === 'cat-none').length;
+  const investmentAssets = assets.filter(asset =>
+    asset.classification === 'ATIVO' &&
+    (asset.category === 'INVESTIMENTO_LIQUIDO' || asset.category === 'PREVIDENCIA_3A')
+  );
+  const investmentGroups = [
+    { currency: 'BRL' as const, label: 'Grupo Brasil' },
+    { currency: 'EUR' as const, label: 'Grupo Europa' },
+    { currency: 'CHF' as const, label: 'Grupo Suíça' }
+  ].map(group => {
+    const holdings = investmentAssets.filter(asset => asset.currency === group.currency);
+    const originalTotal = holdings.reduce((sum, asset) => sum + (asset.originalValue ?? asset.value), 0);
+    const convertedHoldings = holdings.filter(asset => asset.baseValue !== undefined || group.currency === currency || hasRateToCHF(group.currency));
+    const convertedTotal = convertedHoldings.reduce((sum, asset) => sum + (asset.baseValue ?? convertToCHF(asset.originalValue ?? asset.value, asset.currency)), 0);
+    const institutions = Array.from(new Set(holdings.map(asset => asset.institution || 'Custódia não informada')));
+    return { ...group, holdings, originalTotal, convertedTotal, institutions, conversionAvailable: holdings.length === convertedHoldings.length };
+  });
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="dashboard-shell space-y-8 pb-12">
       {/* Top Banner Context with Dynamic Month Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+      <div className="dashboard-context flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-6">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-400 uppercase tracking-[0.2em]">
             <span>Visão Patrimonial e Orçamentária</span>
             <span>•</span>
             <span>{formatMonthLabel(selectedMonth, 'full')}</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-100 mt-1">
-            Planejamento Financeiro de {activeClient.name}
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-100 mt-2">
+            {activeClient.name}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            Moeda base {activeClient.baseCurrency} • Residência Fiscal {activeClient.residenceCountry} • Fuso {activeClient.timezone}
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Residência fiscal: {activeClient.residenceCountry} <span className="text-slate-600">·</span> Moeda base: {activeClient.baseCurrency}
           </p>
+          <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-500">
+            <span className={`h-1.5 w-1.5 rounded-full ${isSyncing ? 'bg-blue-400 animate-pulse' : 'bg-emerald-400'}`} />
+            {isSyncing ? 'Sincronização em andamento' : lastSyncedAt ? `Sincronizado em ${new Date(lastSyncedAt).toLocaleString('pt-BR')}` : 'Sincronização pronta'}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -271,7 +291,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           {canManageIntegrations && <button
             onClick={() => triggerLunchMoneySync()}
             disabled={isSyncing}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/80 transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer disabled:opacity-50"
+            className="p-2 text-slate-400 hover:text-blue-300 transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer disabled:opacity-50"
             title="Sincronizar dados do Lunch Money"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-400' : ''}`} />
@@ -303,15 +323,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       )}
 
       {/* Primary KPI Metrics Grid */}
+      <section className="dashboard-hero border-b border-slate-800/80 pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-8 items-end">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Patrimônio líquido</p>
+            <div className="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight text-slate-50 font-mono">
+              {formatCurrency(currentNetWorth, currency)}
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-4 max-w-xl">
+              <div><p className="text-[11px] text-slate-500">Liquidez</p><p className="mt-1 text-sm font-mono text-slate-200">{formatCurrency(availableBalance, currency)}</p></div>
+              <div><p className="text-[11px] text-slate-500">Ativos</p><p className="mt-1 text-sm font-mono text-slate-200">{formatCurrency(totalAssets, currency)}</p></div>
+              <div><p className="text-[11px] text-slate-500">Passivos</p><p className="mt-1 text-sm font-mono text-rose-300">{formatCurrency(totalLiabilities, currency)}</p></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-l border-slate-800/80 pl-6">
+            {accountCurrencyBalances.map(balance => (
+              <div key={balance.currencyCode}>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">{balance.currencyCode}</p>
+                <p className="mt-1 text-sm font-mono text-slate-200">{formatCurrency(balance.amount, balance.currencyCode as any)}</p>
+                {!balance.conversionAvailable && <p className="mt-1 text-[10px] text-amber-300">Conversão indisponível</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Patrimônio Líquido */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm relative overflow-hidden">
+        <div className="dashboard-metric border-l-2 border-blue-400/70 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Patrimônio Líquido Total</span>
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-              <Landmark className="w-4 h-4" />
-            </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-slate-100">
@@ -326,12 +368,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Saldo Líquido Disponível */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="dashboard-metric border-l-2 border-emerald-400/70 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Liquidez Disponível</span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-              <Wallet className="w-4 h-4" />
-            </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-slate-100">
@@ -357,12 +396,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Receitas do Mês Selecionado */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="dashboard-metric border-l-2 border-emerald-400/70 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Receitas ({formatMonthLabel(selectedMonth, 'short')})</span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-              <TrendingUp className="w-4 h-4" />
-            </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-emerald-400">
@@ -382,12 +418,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Despesas do Mês Selecionado */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="dashboard-metric border-l-2 border-rose-400/70 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Despesas ({formatMonthLabel(selectedMonth, 'short')})</span>
-            <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
-              <TrendingDown className="w-4 h-4" />
-            </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-rose-400">
@@ -404,11 +437,58 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
+      <section className="border-y border-slate-800/80 py-7">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-300">Investment intelligence</p>
+            <h2 className="text-xl font-semibold text-slate-100 mt-1">Investimentos</h2>
+          </div>
+          <button
+            onClick={() => onNavigate('investments')}
+            className="text-xs text-blue-300 hover:text-blue-200 font-semibold flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+          >
+            <span>Ver carteira completa</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {investmentGroups.map(group => (
+            <div key={group.currency} className="border-l border-slate-700 pl-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-200">{group.label}</p>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500 mt-1">{group.currency}</p>
+                </div>
+                <p className="text-sm font-mono text-slate-100">
+                  {formatCurrency(group.originalTotal, group.currency)}
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-3 truncate" title={group.institutions.join(' · ')}>
+                {group.institutions.length > 0 ? group.institutions.join(' · ') : 'Nenhuma posição registrada'}
+              </p>
+              {group.holdings.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {group.holdings.slice(0, 3).map(holding => (
+                    <div key={holding.id} className="flex items-center justify-between gap-3 text-xs">
+                      <span className="text-slate-400 truncate">{holding.name}</span>
+                      <span className="font-mono text-slate-300 shrink-0">{formatCurrency(holding.originalValue ?? holding.value, group.currency)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className={`mt-4 text-[11px] font-mono ${group.conversionAvailable ? 'text-slate-400' : 'text-amber-300'}`}>
+                {group.conversionAvailable ? `≈ ${formatCurrency(group.convertedTotal, currency)}` : 'Conversão indisponível'}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Main Charts Section: Patrimonial Evolution & Budget Realization */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Multi-Month Evolution Bar / Area Chart */}
-        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-2 border-b border-slate-800/80 pb-6 flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-100">
@@ -453,7 +533,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Planned vs Realized in Selected Month */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+        <div className="border-b border-slate-800/80 pb-6 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-100">
@@ -491,10 +571,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       </div>
 
       {/* Category Spending Breakdown & Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Top Spending Categories Pie & List */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="border-b border-slate-800/80 pb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-100">
@@ -565,7 +645,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Connected Accounts Breakdown */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="border-b border-slate-800/80 pb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-100">
@@ -586,7 +666,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
           <div className="space-y-3">
             {accounts.slice(0, 5).map(acc => (
-              <div key={acc.id} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-800/60 border border-slate-750">
+              <div key={acc.id} className="flex items-center justify-between py-2.5 border-b border-slate-800/70 last:border-0">
                 <div>
                   <div className="text-xs font-semibold text-slate-200">{acc.name}</div>
                   <div className="text-[11px] text-slate-400">{acc.institution || 'Banco'} • {acc.currency}</div>
@@ -600,7 +680,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Goals Progress */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+        <div className="border-b border-slate-800/80 pb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-100">
