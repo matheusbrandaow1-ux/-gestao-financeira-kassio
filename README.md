@@ -87,7 +87,6 @@ O sistema é construído como uma aplicação full-stack moderna dividida em:
 │   └── main.tsx                         # Ponto de entrada React
 ├── .env.example                         # Modelo de variáveis de ambiente (sem valores reais)
 ├── .gitignore                           # Regras estritas de exclusão de artefatos e segredos
-├── firebase-applet-config.json          # Configuração pública do Firebase Client
 ├── firebase-blueprint.json              # Especificação do schema de dados Firestore
 ├── firestore.rules                      # Regras de segurança e autorização Firestore
 ├── package.json                         # Dependências e scripts do projeto

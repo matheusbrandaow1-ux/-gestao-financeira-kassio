@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
@@ -6,10 +6,12 @@ import authRouter from './server/routes/auth';
 import transactionsRouter from './server/routes/transactions';
 import lunchMoneyRouter from './server/routes/lunchmoney';
 import aiRouter from './server/routes/ai';
+import monthlyCloseRouter from './server/routes/monthlyClose';
+import dataRouter from './server/routes/data';
 
 dotenv.config();
 
-async function startServer() {
+export async function createApp(options: { withFrontend?: boolean } = {}) {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
@@ -39,9 +41,22 @@ async function startServer() {
 
   // Mount AI Financial Intelligence Router
   app.use('/api/ai', aiRouter);
+  app.use('/api/monthly-close', monthlyCloseRouter);
+  app.use('/api/data', dataRouter);
+
+  // Keep production responses stable and prevent stack/request internals from leaking.
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+    console.error('[HTTP_ERROR]', { method: req.method, path: req.path, code: err.name });
+    if (res.headersSent) return;
+    res.status(500).json({
+      success: false,
+      code: 'INTERNAL_ERROR',
+      message: 'Ocorreu um erro interno.'
+    });
+  });
 
   // Vite middleware for development or static serving for production
-  if (process.env.NODE_ENV !== 'production') {
+  if (options.withFrontend && process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -56,6 +71,12 @@ async function startServer() {
     });
   }
 
+  return app;
+}
+
+async function startServer() {
+  const PORT = Number(process.env.PORT) || 3000;
+  const app = await createApp({ withFrontend: true });
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Financial Planning server running on http://0.0.0.0:${PORT} (Node ${process.version}, PID ${process.pid})`);
   });
@@ -78,7 +99,9 @@ async function startServer() {
   });
 }
 
-startServer().catch(err => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+if (process.env.START_SERVER === 'true') {
+  startServer().catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+}

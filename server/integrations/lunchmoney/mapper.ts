@@ -56,6 +56,13 @@ export function mapLunchMoneyAccount(
     type: mapAccountType(acc.type_name || acc.subtype_name),
     currency: (acc.currency ? acc.currency.toUpperCase() : 'CHF') as CurrencyCode,
     balance,
+    originalBalance: balance,
+    originalCurrency: (acc.currency ? acc.currency.toUpperCase() : 'CHF') as CurrencyCode,
+    balanceBase: undefined,
+    baseCurrency: 'CHF',
+    fxRate: undefined,
+    fxRateTimestamp: undefined,
+    fxSource: 'LUNCH_MONEY_ACCOUNT_BALANCE',
     isActive: acc.status !== 'inactive' && acc.status !== 'closed',
     provider: 'LUNCH_MONEY',
     externalId: String(acc.id),
@@ -279,14 +286,25 @@ export function mapLunchMoneyTransaction(
 
   const currency = (tx.currency ? tx.currency.toUpperCase() : 'CHF') as CurrencyCode;
 
-  // Determine transaction type in accordance with LM v2
-  let transactionType: TransactionType = 'DESPESA';
-  if (tx.is_income || isNegative) {
+  // Normalize provider sign and labels before any income/expense aggregation.
+  const searchableText = [tx.payee, tx.original_name, tx.notes]
+    .filter(Boolean)
+    .join(' ')
+    .toLocaleLowerCase('pt-BR');
+  let transactionType: TransactionType = isNegative ? 'RECEITA' : 'DESPESA';
+  if (/pagamento recebido|pagamento de fatura|fatura|cr[eé]dit|bcn mobile banking|bcn-netbanking|versement|ordre permanent|transfer/.test(searchableText)) {
+    transactionType = 'TRANSFERÊNCIA';
+  } else if (/iof de volta|estorno|reembolso|refund/.test(searchableText)) {
+    transactionType = 'ESTORNO';
+  } else if (tx.is_income || isNegative) {
     transactionType = 'RECEITA';
   }
 
   // Base amount calculation
-  const toBase = tx.to_base !== undefined && tx.to_base !== null ? roundMoney(Math.abs(tx.to_base)) : absAmount;
+  const hasProviderBaseAmount = tx.to_base !== undefined && tx.to_base !== null;
+  const toBase = hasProviderBaseAmount
+    ? roundMoney(Math.abs(tx.to_base as number))
+    : currency === 'CHF' ? absAmount : undefined;
 
   // Find linked category from cache if not attached
   let categoryName = tx.category_name || undefined;

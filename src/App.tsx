@@ -20,6 +20,7 @@ import { IntegrationsView } from './views/IntegrationsView';
 import { SettingsView } from './views/SettingsView';
 import { LoginView } from './views/LoginView';
 import { Menu, RefreshCw, ShieldAlert } from 'lucide-react';
+import { getCapabilities } from './lib/capabilities';
 
 const AppContent: React.FC = () => {
   const { user, loading: authLoading, role } = useAuth();
@@ -27,7 +28,7 @@ const AppContent: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isLoading: clientLoading } = useClient();
 
-  const isConsultant = role === 'CONSULTANT' || role === 'ADMIN';
+  const isConsultant = getCapabilities(role).canManageIntegrations;
 
   // Guard against Client role attempting to access consultant-only admin tabs
   useEffect(() => {

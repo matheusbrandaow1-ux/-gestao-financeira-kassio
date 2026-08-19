@@ -3,6 +3,7 @@ import { LunchMoneyClient } from '../integrations/lunchmoney/client';
 import { LunchMoneySyncService } from '../integrations/lunchmoney/sync';
 import { lunchMoneyCache } from '../integrations/lunchmoney/cache';
 import { LunchMoneyIntegrationStore } from '../integrations/lunchmoney/store';
+import { LunchMoneyTestClient } from '../integrations/lunchmoney/testClient';
 import { requireAuth, requireConsultant, resolveAuthorizedClientId } from './auth';
 
 const router = Router();
@@ -33,17 +34,8 @@ router.get('/integration', requireAuth, (req: Request, res: Response) => {
 
 // 2. Test a raw token before connecting (Transient validation via GET /v2/me) - STRICTLY CONSULTANT ONLY
 router.post('/test-token', requireConsultant, async (req: Request, res: Response) => {
-  const { token } = req.body || {};
-  if (!token || typeof token !== 'string' || token.trim() === '') {
-    return res.status(400).json({
-      success: false,
-      code: 'INVALID_TOKEN',
-      message: 'Informe um Access Token válido do Lunch Money.'
-    });
-  }
-
   try {
-    const client = new LunchMoneyClient(token.trim());
+    const client = new LunchMoneyClient();
     const user = await client.getMe();
 
     return res.json({
@@ -70,20 +62,14 @@ router.post('/test-token', requireConsultant, async (req: Request, res: Response
 
 // 3. Connect/Save Lunch Money token for a client - STRICTLY CONSULTANT ONLY
 router.post('/connect', requireConsultant, async (req: Request, res: Response) => {
-  const { clientId, token } = req.body || {};
-  const targetClientId = clientId || 'kassio-pf';
-
-  if (!token || typeof token !== 'string' || token.trim() === '') {
-    return res.status(400).json({
-      success: false,
-      code: 'INVALID_TOKEN',
-      message: 'Informe um Access Token do Lunch Money para conectar.'
-    });
-  }
+  const { clientId } = req.body || {};
+  const access = resolveAuthorizedClientId(req, clientId);
+  if (!access.isAllowed) return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Acesso não autorizado para este cliente.' });
+  const targetClientId = access.authorizedClientId;
 
   try {
-    // 1. Validate token with Lunch Money API
-    const client = new LunchMoneyClient(token.trim());
+    // The credential is always read from the server environment.
+    const client = new LunchMoneyClient();
     const user = await client.getMe();
 
     const userName = user.user_name || user.name || 'Kássio';
@@ -92,9 +78,8 @@ router.post('/connect', requireConsultant, async (req: Request, res: Response) =
     const primaryCurrency = (user.primary_currency ? user.primary_currency.toUpperCase() : 'CHF');
     const userId = user.user_id || user.id;
 
-    // 2. Persist in isolated server integration store (only tokenLast4 is public)
+    // 2. Persist only non-secret connection metadata; the credential remains in the environment.
     const publicIntegration = LunchMoneyIntegrationStore.saveIntegration(targetClientId, {
-      token: token.trim(),
       status: 'CONNECTED',
       lunchMoneyUserId: userId,
       lunchMoneyBudgetName: budgetName,
@@ -119,7 +104,7 @@ router.post('/connect', requireConsultant, async (req: Request, res: Response) =
     return res.status(statusCode).json({
       success: false,
       code: err.code || 'CONNECTION_FAILED',
-      message: err.message || 'Falha ao conectar com o Lunch Money. Verifique se o token está correto.'
+      message: 'Falha ao conectar com o Lunch Money. Verifique a configuração server-side.'
     });
   }
 });
@@ -127,7 +112,9 @@ router.post('/connect', requireConsultant, async (req: Request, res: Response) =
 // 4. Disconnect Lunch Money for a client - STRICTLY CONSULTANT ONLY
 router.post('/disconnect', requireConsultant, (req: Request, res: Response) => {
   const { clientId } = req.body || {};
-  const targetClientId = clientId || 'kassio-pf';
+  const access = resolveAuthorizedClientId(req, clientId);
+  if (!access.isAllowed) return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Acesso não autorizado para este cliente.' });
+  const targetClientId = access.authorizedClientId;
 
   LunchMoneyIntegrationStore.disconnectIntegration(targetClientId);
   lunchMoneyCache.clear(targetClientId);
@@ -149,9 +136,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     });
   }
 
-  const token = LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId);
-
-  if (!token) {
+  if (!LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId)) {
     return res.status(401).json({
       success: false,
       status: 'NOT_CONFIGURED',
@@ -162,7 +147,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   }
 
   try {
-    const client = new LunchMoneyClient(token);
+    const client = new LunchMoneyClient();
     const user = await client.getMe();
     
     const userMeta = {
@@ -206,9 +191,7 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
     });
   }
 
-  const token = LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId);
-
-  if (!token) {
+  if (!LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId)) {
     return res.json({
       configured: false,
       status: 'NOT_CONFIGURED',
@@ -218,7 +201,7 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
   }
 
   try {
-    const client = new LunchMoneyClient(token);
+    const client = new LunchMoneyClient();
     const user = await client.getMe();
     return res.json({
       configured: true,
@@ -242,7 +225,7 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
 });
 
 // 7. Trigger Idempotent Sync for a client
-router.post('/sync', requireAuth, async (req: Request, res: Response) => {
+router.post('/sync', requireConsultant, async (req: Request, res: Response) => {
   const { 
     clientId, 
     startDate, 
@@ -264,9 +247,7 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
     });
   }
 
-  const token = LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId);
-
-  if (!token) {
+  if (!LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId)) {
     return res.status(401).json({
       success: false,
       code: 'AUTH_REQUIRED',
@@ -275,7 +256,7 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
   }
 
   try {
-    const syncService = new LunchMoneySyncService(token);
+    const syncService = new LunchMoneySyncService(process.env.NODE_ENV === 'test' ? new LunchMoneyTestClient() : undefined);
     const result = await syncService.runSync(authorizedClientId, {
       startDate,
       updatedSince,
@@ -299,8 +280,8 @@ router.post('/sync', requireAuth, async (req: Request, res: Response) => {
   } catch (err: any) {
     return res.status(500).json({
       success: false,
-      message: err.message || 'Erro interno durante sincronização.',
-      error: err
+      code: 'SYNC_FAILED',
+      message: 'Erro interno durante sincronização.'
     });
   }
 });
@@ -313,7 +294,7 @@ router.post('/cache/clear', requireConsultant, (req: Request, res: Response) => 
 });
 
 // 9. Update Transaction in Lunch Money (write-back)
-router.put('/transaction/:id', requireAuth, async (req: Request, res: Response) => {
+router.put('/transaction/:id', requireConsultant, async (req: Request, res: Response) => {
   const { authorizedClientId, isAllowed } = resolveAuthorizedClientId(req, req.body?.clientId as string);
   if (!isAllowed) {
     return res.status(403).json({
@@ -323,8 +304,7 @@ router.put('/transaction/:id', requireAuth, async (req: Request, res: Response) 
     });
   }
 
-  const token = LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId);
-  if (!token) {
+  if (!LunchMoneyIntegrationStore.getTokenForClient(authorizedClientId)) {
     return res.status(401).json({
       success: false,
       message: 'Lunch Money não conectado para este cliente.'
@@ -335,7 +315,7 @@ router.put('/transaction/:id', requireAuth, async (req: Request, res: Response) 
   const { category_id, notes, tags, payee, status } = req.body || {};
 
   try {
-    const client = new LunchMoneyClient(token);
+    const client = new LunchMoneyClient();
     const result = await client.updateTransaction(txId, {
       category_id,
       notes,

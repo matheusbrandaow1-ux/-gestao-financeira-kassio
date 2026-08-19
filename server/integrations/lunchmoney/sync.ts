@@ -51,8 +51,8 @@ export interface SyncResult {
 export class LunchMoneySyncService {
   private client: LunchMoneyClient;
 
-  constructor(apiKey?: string) {
-    this.client = new LunchMoneyClient(apiKey);
+  constructor(client: LunchMoneyClient = new LunchMoneyClient()) {
+    this.client = client;
   }
 
   public async runSync(
@@ -432,12 +432,31 @@ export class LunchMoneySyncService {
             country: 'Suíça'
           };
 
-          const result = await categorizationEngine.classifyTransaction(
-            classifyInput,
-            availableCategories,
-            options.existingRules || [],
-            clientId
-          );
+          let result;
+          try {
+            result = await categorizationEngine.classifyTransaction(
+              classifyInput,
+              availableCategories,
+              options.existingRules || [],
+              clientId
+            );
+          } catch (classificationError: any) {
+            console.warn('[Sync Categorization Notice] Classificação auxiliar indisponível:', classificationError?.message || classificationError);
+            result = {
+              transactionId: repTx.id,
+              rawPayee: repTx.merchant || repTx.description,
+              normalizedMerchant: repTx.merchant || repTx.description,
+              categoryId: undefined,
+              categoryName: undefined,
+              confidenceScore: 0,
+              reasoning: 'Classificação não disponível; revisão humana necessária.',
+              reasoningShort: 'Revisão humana necessária.',
+              source: 'AI_REASONING' as const,
+              isAutoClassified: false,
+              needsReview: true,
+              sentToPending: true
+            };
+          }
 
           if (result.researchUsed || result.source === 'MERCHANT_RESEARCH') {
             researchedCount++;

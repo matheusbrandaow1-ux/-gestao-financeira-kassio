@@ -1,14 +1,5 @@
 import { CurrencyCode } from '../types';
-
-// Standard fixed exchange rates relative to CHF (Swiss Franc) base currency
-// Can be updated or fetched dynamically if configured
-export const EXCHANGE_RATES_TO_CHF: Record<CurrencyCode, number> = {
-  CHF: 1.0,
-  EUR: 0.94, // 1 EUR = ~0.94 CHF
-  USD: 0.88, // 1 USD = ~0.88 CHF
-  BRL: 0.16, // 1 BRL = ~0.16 CHF
-  GBP: 1.12, // 1 GBP = ~1.12 CHF
-};
+import { fxService } from './fxService';
 
 /**
  * Safely round monetary number to 2 decimal places to avoid floating point anomalies.
@@ -28,13 +19,10 @@ export function convertCurrency(
 ): { converted: number; rate: number } {
   if (from === to) return { converted: roundMoney(amount), rate: 1.0 };
   
-  // Convert 'from' -> CHF -> 'to'
-  const fromRateToChf = EXCHANGE_RATES_TO_CHF[from] || 1.0;
-  const toRateToChf = EXCHANGE_RATES_TO_CHF[to] || 1.0;
+  const effectiveRate = fxService.getExchangeRate(from, to);
+  if (effectiveRate <= 0) return { converted: 0, rate: 0 };
   
-  const chfValue = amount * fromRateToChf;
-  const targetValue = chfValue / toRateToChf;
-  const effectiveRate = fromRateToChf / toRateToChf;
+  const targetValue = amount * effectiveRate;
 
   return {
     converted: roundMoney(targetValue),

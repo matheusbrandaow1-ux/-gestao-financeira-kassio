@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 
 const router = Router();
+const loginAttempts = new Map<string, { count: number; firstAttemptAt: number; blockedUntil: number }>();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
 
 // Server-side secret for HMAC session signing
 // STRICT REQUIREMENT: Must be explicitly provided via process.env.SESSION_SECRET.
@@ -212,8 +215,17 @@ export function resolveAuthorizedClientId(req: Request, requestedClientId?: stri
     return { authorizedClientId: clientAssignedId, isAllowed: true };
   }
 
-  // Consultant has access to requested or default client
-  return { authorizedClientId: requestedClientId || 'kassio-pf', isAllowed: true };
+  // Consultants must be explicitly scoped. The environment value is a
+  // server-side fallback for deployments that do not yet persist an ACL.
+  const authorizedClientIds = (process.env.CONSULTANT_CLIENT_IDS || 'kassio-pf')
+    .split(',')
+    .map(clientId => clientId.trim())
+    .filter(Boolean);
+  const targetClientId = requestedClientId || authorizedClientIds[0];
+  return {
+    authorizedClientId: targetClientId,
+    isAllowed: authorizedClientIds.includes(targetClientId)
+  };
 }
 
 // Timing-safe password check using sha256 hashes
@@ -241,6 +253,12 @@ router.post('/login', (req: Request, res: Response) => {
   }
 
   const cleanEmail = email.trim().toLowerCase();
+  const now = Date.now();
+  const attempt = loginAttempts.get(cleanEmail);
+  if (attempt && attempt.blockedUntil > now) {
+    return res.status(429).json({ success: false, code: 'LOGIN_RATE_LIMITED', message: 'Muitas tentativas. Tente novamente mais tarde.' });
+  }
+  if (attempt && now - attempt.firstAttemptAt > LOGIN_WINDOW_MS) loginAttempts.delete(cleanEmail);
   const users = getPredefinedUsers();
 
   // Find predefined user
@@ -265,12 +283,17 @@ router.post('/login', (req: Request, res: Response) => {
 
   const isValidPassword = verifyPasswordSafe(password, foundUser.passwordSecret);
   if (!isValidPassword) {
+    const current = loginAttempts.get(cleanEmail) || { count: 0, firstAttemptAt: now, blockedUntil: 0 };
+    current.count += 1;
+    if (current.count >= LOGIN_MAX_ATTEMPTS) current.blockedUntil = now + LOGIN_WINDOW_MS;
+    loginAttempts.set(cleanEmail, current);
     return res.status(401).json({
       success: false,
       code: 'INVALID_CREDENTIALS',
       message: 'Email ou senha inválidos.'
     });
   }
+  loginAttempts.delete(cleanEmail);
 
   // Verify that SESSION_SECRET is configured before issuing token
   let token: string;

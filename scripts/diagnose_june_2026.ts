@@ -20,7 +20,7 @@ async function diagnoseJune2026() {
     process.exit(1);
   }
 
-  const client = new LunchMoneyClient(apiKey.trim());
+  const client = new LunchMoneyClient();
 
   // 1. Etapa 1: Leitura Lunch Money
   console.log('\n[Etapa 1: Leitura Lunch Money] Verificando conexão e buscando dados...');

@@ -59,6 +59,13 @@ export interface CanonicalAccount {
   type: AccountType;
   currency: CurrencyCode;
   balance: number; // in cents or standard unit depending on convention, we maintain exact amount
+  originalBalance?: number;
+  originalCurrency?: CurrencyCode;
+  balanceBase?: number;
+  baseCurrency?: CurrencyCode;
+  fxRate?: number;
+  fxRateTimestamp?: string;
+  fxSource?: string;
   balanceFormatted?: string;
   isActive: boolean;
   provider: 'MANUAL' | 'LUNCH_MONEY';
@@ -306,6 +313,12 @@ export interface AssetOrLiability {
   category: AssetCategory;
   value: number; // positive number; classification dictates if it adds or subtracts
   currency: CurrencyCode;
+  originalValue?: number;
+  baseValue?: number;
+  fxRate?: number;
+  fxRateTimestamp?: string;
+  fxSource?: string;
+  source?: 'MANUAL' | 'LUNCH_MONEY' | 'SIMULATION';
   institution?: string;
   acquisitionDate?: string;
   interestRate?: number;
@@ -363,7 +376,13 @@ export interface PendingItem {
     | 'AI_LOW_CONFIDENCE'
     | 'RECORRENCIA_SUGERIDA'
     | 'ANOMALIA_DETECTADA'
-    | 'ESTABELECIMENTO_NOVO';
+    | 'ESTABELECIMENTO_NOVO'
+    | 'FX_STALE'
+    | 'DUPLICATE'
+    | 'SYNC_ERROR'
+    | 'UNCATEGORIZED'
+    | 'BALANCE_MISMATCH'
+    | 'OTHER';
   title: string;
   description: string;
   severity: PendingItemSeverity;
@@ -371,8 +390,38 @@ export interface PendingItem {
   actionUrl: string;
   actionLabel?: string;
   isResolved: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolutionNote?: string;
   metadata?: Record<string, any>;
   createdAt: string;
+}
+
+export type MonthlyCloseStatus = 'OPEN' | 'REVIEW' | 'CLOSED';
+
+export interface MonthlyClose {
+  id: string;
+  clientId: string;
+  month: string;
+  status: MonthlyCloseStatus;
+  openedAt: string;
+  reviewedAt?: string;
+  closedAt?: string;
+  closedBy?: string;
+  reopenedAt?: string;
+  reopenedBy?: string;
+  validationSummary: {
+    accountsReconciled: boolean;
+    transactionCount: number;
+    uncategorizedCount: number;
+    possibleTransfers: number;
+    possibleDuplicates: number;
+    reviewedIncome: number;
+    reviewedExpenses: number;
+    recurringCount: number;
+    plannedVsRealizedChecked: boolean;
+    blockers: string[];
+  };
 }
 
 export type SyncJobStatus = 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'SINCRONIZANDO' | 'SINCRONIZADO' | 'ERRO' | 'CREDENCIAL_INVALIDA';
@@ -431,7 +480,6 @@ export interface AuditLog {
 export interface PublicLunchMoneyIntegration {
   clientId: string;
   status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
-  tokenLast4?: string;
   connectedAt?: string;
   lastValidatedAt?: string;
   lunchMoneyUserId?: number | string;
@@ -509,7 +557,9 @@ export interface FXRateTable {
   baseCurrency: CurrencyCode;
   rates: Record<string, number>; // e.g. { 'BRL': 0.158, 'EUR': 0.942, 'USD': 0.884, 'CHF': 1.0 }
   lastUpdated: string;
-  isRealTime?: boolean;
+  source: 'PROVIDER' | 'CACHED' | 'FALLBACK';
+  isStale: boolean;
+  isRealTime: boolean;
 }
 
 export interface MonthlyFinancialSummaryReportData {

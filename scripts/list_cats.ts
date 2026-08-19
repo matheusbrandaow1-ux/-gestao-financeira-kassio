@@ -2,7 +2,7 @@ import { LunchMoneyClient } from '../server/integrations/lunchmoney/client';
 
 async function listAllCategories() {
   const apiKey = process.env.LUNCH_MONEY_API_KEY;
-  const client = new LunchMoneyClient(apiKey);
+  const client = new LunchMoneyClient();
   const res = await client.getCategories({ format: 'flattened' });
   console.log('--- CATEGORIAS DO LUNCH MONEY ---');
   res.categories?.forEach((c: any) => {

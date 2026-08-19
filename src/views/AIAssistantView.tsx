@@ -17,6 +17,8 @@ import {
 import { useClient } from '../context/ClientContext';
 import { useAuth } from '../context/AuthContext';
 import { MonthlyFinancialSummaryReportData } from '../types';
+import { getTransactionBaseAmount } from '../lib/financialMetrics';
+import { convertToCHF } from '../lib/fxService';
 
 interface Message {
   id: string;
@@ -34,7 +36,8 @@ export const AIAssistantView: React.FC = () => {
     monthlyPlan, 
     goals, 
     pendingItems,
-    lastSyncedAt
+    lastSyncedAt,
+    selectedMonth
   } = useClient();
   const { user, role } = useAuth();
   const isConsultant = role === 'CONSULTANT' || role === 'ADMIN';
@@ -56,7 +59,7 @@ export const AIAssistantView: React.FC = () => {
   // Monthly summary state
   const [summaryReport, setSummaryReport] = useState<MonthlyFinancialSummaryReportData | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
-  const [summaryMonth, setSummaryMonth] = useState(new Date().toISOString().substring(0, 7));
+  const [summaryMonth, setSummaryMonth] = useState(selectedMonth);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -85,17 +88,17 @@ export const AIAssistantView: React.FC = () => {
 
   // Build sanitized financial context strictly without secrets
   const buildFinancialContext = () => {
-    const totalBalance = accounts.reduce((acc, a) => acc + (a.balance || 0), 0);
-    const incomeRealized = transactions.filter(t => t.transactionType === 'RECEITA').reduce((s, t) => s + t.amount, 0);
-    const expensesRealized = transactions.filter(t => t.transactionType === 'DESPESA').reduce((s, t) => s + t.amount, 0);
-    const investmentsRealized = transactions.filter(t => t.transactionType === 'INVESTIMENTO').reduce((s, t) => s + t.amount, 0);
+    const totalBalance = accounts.reduce((acc, a) => acc + (a.balanceBase ?? convertToCHF(a.originalBalance ?? a.balance, a.originalCurrency || a.currency)), 0);
+    const incomeRealized = transactions.filter(t => t.transactionType === 'RECEITA').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
+    const expensesRealized = transactions.filter(t => t.transactionType === 'DESPESA').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
+    const investmentsRealized = transactions.filter(t => t.transactionType === 'INVESTIMENTO').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
     const netResult = incomeRealized - expensesRealized - investmentsRealized;
 
     // Top categories
     const catMap = new Map<string, number>();
     for (const t of transactions.filter(tx => tx.transactionType === 'DESPESA')) {
       const cat = t.categoryName || 'Outros';
-      catMap.set(cat, (catMap.get(cat) || 0) + t.amount);
+      catMap.set(cat, (catMap.get(cat) || 0) + getTransactionBaseAmount(t));
     }
     const topExpenseCategories = Array.from(catMap.entries())
       .sort((a, b) => b[1] - a[1])

@@ -20,6 +20,7 @@ import {
   getNextMonth, 
   formatMonthLabel 
 } from '../lib/monthUtils';
+import { getTransactionBaseAmount } from '../lib/financialMetrics';
 
 export const PlanningView: React.FC = () => {
   const { 
@@ -28,14 +29,15 @@ export const PlanningView: React.FC = () => {
     transactions, 
     monthlyPlan, 
     updateMonthlyPlan, 
-    duplicatePreviousMonthPlan 
+    duplicatePreviousMonthPlan,
+    selectedMonth,
+    setSelectedMonth
   } = useClient();
 
   const availableMonths = useMemo(() => {
     return getAvailableMonths(transactions, 'desc');
   }, [transactions]);
 
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => availableMonths[0] || '2026-08');
   const [isEditingTargets, setIsEditingTargets] = useState<boolean>(false);
   const [tempPlan, setTempPlan] = useState<MonthlyPlan>(monthlyPlan);
   const [duplicateSuccessMsg, setDuplicateSuccessMsg] = useState<string | null>(null);
@@ -50,19 +52,19 @@ export const PlanningView: React.FC = () => {
   const realizedIncome = useMemo(() => {
     return monthTransactions
       .filter(t => t.transactionType === 'RECEITA')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [monthTransactions]);
 
   const realizedExpenses = useMemo(() => {
     return monthTransactions
       .filter(t => t.transactionType === 'DESPESA')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [monthTransactions]);
 
   const realizedInvestments = useMemo(() => {
     return monthTransactions
       .filter(t => t.transactionType === 'INVESTIMENTO')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [monthTransactions]);
 
   const plannedBalance = (monthlyPlan.plannedIncome || 0) - (monthlyPlan.plannedExpenses || 0) - (monthlyPlan.plannedInvestments || 0);
@@ -81,7 +83,7 @@ export const PlanningView: React.FC = () => {
     const map: Record<string, number> = {};
     monthTransactions.forEach(t => {
       if (t.categoryId) {
-        map[t.categoryId] = (map[t.categoryId] || 0) + t.amount;
+        map[t.categoryId] = (map[t.categoryId] || 0) + getTransactionBaseAmount(t);
       }
     });
     return map;

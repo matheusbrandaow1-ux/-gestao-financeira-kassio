@@ -13,10 +13,14 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
+import { useAuth } from '../context/AuthContext';
+import { getCapabilities } from '../lib/capabilities';
 import { CanonicalAccount, AccountType, CurrencyCode } from '../types';
 import { formatCurrency } from '../lib/money';
 
 export const AccountsView: React.FC = () => {
+  const { role } = useAuth();
+  const { canEditAccounts, canManageIntegrations } = getCapabilities(role);
   const { 
     activeClient, 
     accounts, 
@@ -48,11 +52,7 @@ export const AccountsView: React.FC = () => {
 
   const currency = activeClient.baseCurrency;
 
-  const totalBalanceInCHF = accounts.reduce((sum, a) => {
-    // Basic conversion approximation for summary
-    const multiplier = a.currency === 'EUR' ? 0.94 : a.currency === 'USD' ? 0.88 : 1.0;
-    return sum + (a.balance * multiplier);
-  }, 0);
+  const totalBalanceInCHF = accounts.reduce((sum, a) => sum + (a.balanceBase ?? a.balance), 0);
 
   const handleOpenCreate = () => {
     setEditingAcc(null);
@@ -118,21 +118,21 @@ export const AccountsView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
+          {canManageIntegrations && <button
             onClick={() => triggerLunchMoneySync()}
             disabled={isSyncing}
             className="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all flex items-center gap-1.5 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-400' : 'text-blue-400'}`} />
             <span>Sincronizar Saldos</span>
-          </button>
-          <button
+          </button>}
+          {canEditAccounts && <button
             onClick={handleOpenCreate}
             className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             <span>Nova Conta</span>
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -145,21 +145,21 @@ export const AccountsView: React.FC = () => {
             Sincronize com o Lunch Money v2 ou clique em "Nova Conta" para cadastrar saldos reais.
           </p>
           <div className="mt-5 flex items-center justify-center gap-3">
-            <button
+            {canManageIntegrations && <button
               onClick={() => triggerLunchMoneySync()}
               disabled={isSyncing}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>Sincronizar Lunch Money</span>
-            </button>
-            <button
+            </button>}
+            {canEditAccounts && <button
               onClick={handleOpenCreate}
               className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition-all flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Criar Manual</span>
-            </button>
+            </button>}
           </div>
         </div>
       ) : (
@@ -183,13 +183,13 @@ export const AccountsView: React.FC = () => {
                     </span>
 
                     <div className="flex items-center gap-1">
-                      <button
+                      {canEditAccounts && <button
                         onClick={() => handleOpenEdit(acc)}
                         className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      {acc.provider === 'MANUAL' && (
+                      </button>}
+                      {canEditAccounts && acc.provider === 'MANUAL' && (
                         <button
                           onClick={() => deleteAccount(acc.id)}
                           className="p-1 rounded hover:bg-rose-950/60 text-slate-400 hover:text-rose-400"

@@ -21,6 +21,7 @@ import { CanonicalTransaction, TransactionType, ReviewStatus, CurrencyCode } fro
 import { formatCurrency } from '../lib/money';
 import { MonthSelector } from '../components/common/MonthSelector';
 import { getAvailableMonths } from '../lib/monthUtils';
+import { getTransactionBaseAmount } from '../lib/financialMetrics';
 
 export const TransactionsView: React.FC = () => {
   const { 
@@ -32,7 +33,9 @@ export const TransactionsView: React.FC = () => {
     updateTransaction, 
     deleteTransaction, 
     recategorizeTransaction,
-    addRule
+    addRule,
+    selectedMonth,
+    setSelectedMonth
   } = useClient();
 
   const { role } = useAuth();
@@ -51,14 +54,14 @@ export const TransactionsView: React.FC = () => {
   const [selectedReviewStatus, setSelectedReviewStatus] = useState<string>('ALL');
   const [selectedCurrency, setSelectedCurrency] = useState<string>('ALL');
   const [recurringOnly, setRecurringOnly] = useState<boolean>(false);
-  const [monthFilter, setMonthFilter] = useState<string>(() => availableMonths[0] || '2026-08');
+  const monthFilter = selectedMonth;
 
   // Keep monthFilter in sync if transactions change
   React.useEffect(() => {
     if (monthFilter !== 'ALL' && availableMonths.length > 0 && !availableMonths.includes(monthFilter)) {
-      setMonthFilter(availableMonths[0]);
+      setSelectedMonth(availableMonths[0]);
     }
-  }, [availableMonths, monthFilter]);
+  }, [availableMonths, monthFilter, setSelectedMonth]);
 
   // Modals state
   const [isNewTxOpen, setIsNewTxOpen] = useState(false);
@@ -135,11 +138,11 @@ export const TransactionsView: React.FC = () => {
   // Aggregate stats for filtered list
   const filteredIncome = filteredTransactions
     .filter(t => t.transactionType === 'RECEITA')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
 
   const filteredExpenses = filteredTransactions
     .filter(t => t.transactionType === 'DESPESA')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
 
   const handleCreateTx = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,7 +282,7 @@ export const TransactionsView: React.FC = () => {
             <span className="text-xs text-slate-400 shrink-0">Mês:</span>
             <MonthSelector
               selectedMonth={monthFilter}
-              onChange={setMonthFilter}
+              onChange={setSelectedMonth}
               transactions={transactions}
               allowAllOption={true}
             />

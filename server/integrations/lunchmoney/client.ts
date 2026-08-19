@@ -19,8 +19,8 @@ export class LunchMoneyClient {
   private readonly baseUrl = 'https://api.lunchmoney.dev/v2';
   private readonly apiKey?: string;
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.LUNCH_MONEY_API_KEY;
+  constructor() {
+    this.apiKey = process.env.LUNCH_MONEY_API_KEY;
   }
 
   private getAuthHeader(): Record<string, string> {

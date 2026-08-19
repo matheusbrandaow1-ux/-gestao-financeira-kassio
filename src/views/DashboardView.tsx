@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -32,7 +32,11 @@ import {
   Cell 
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
+import { useAuth } from '../context/AuthContext';
+import { getCapabilities } from '../lib/capabilities';
 import { formatCurrency, formatPercent, calculateProgressPercent } from '../lib/money';
+import { convertToCHF, hasRateToCHF } from '../lib/fxService';
+import { getTransactionBaseAmount } from '../lib/financialMetrics';
 import { TabType } from '../components/common/Sidebar';
 import { MonthSelector } from '../components/common/MonthSelector';
 import { 
@@ -47,6 +51,8 @@ interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
+  const { role } = useAuth();
+  const { canManageIntegrations } = getCapabilities(role);
   const { 
     activeClient, 
     accounts, 
@@ -60,7 +66,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     syncStatus,
     lastSyncedAt,
     isSyncing,
-    triggerLunchMoneySync
+    triggerLunchMoneySync,
+    selectedMonth,
+    setSelectedMonth
   } = useClient();
 
   const currency = activeClient.baseCurrency;
@@ -70,36 +78,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     return getAvailableMonths(transactions, 'desc');
   }, [transactions]);
 
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    return availableMonths[0] || '2026-08';
-  });
-
-  // Keep selectedMonth synchronized if availableMonths changes and current selection is invalid
-  React.useEffect(() => {
-    if (availableMonths.length > 0 && !availableMonths.includes(selectedMonth)) {
-      setSelectedMonth(availableMonths[0]);
-    }
-  }, [availableMonths, selectedMonth]);
-
   const previousMonth = useMemo(() => getPreviousMonth(selectedMonth), [selectedMonth]);
 
   // Compute Current Balances & Net Worth (Real-time account & asset balance)
   const totalAssets = useMemo(() => {
     const assetsVal = assets
       .filter(a => a.classification === 'ATIVO')
-      .reduce((sum, a) => sum + a.value, 0);
-    const accountsVal = accounts
-      .reduce((sum, a) => sum + Math.max(0, a.balance), 0);
+      .reduce((sum, a) => sum + (a.baseValue ?? convertToCHF(a.value, a.currency)), 0);
+    const accountsVal = accounts.reduce((sum, account) => {
+      const originalBalance = account.originalBalance ?? account.balance;
+      return sum + Math.max(0, account.balanceBase ?? convertToCHF(originalBalance, account.originalCurrency || account.currency));
+    }, 0);
     return assetsVal + accountsVal;
   }, [assets, accounts]);
 
   const totalLiabilities = useMemo(() => {
     const passivosVal = assets
       .filter(a => a.classification === 'PASSIVO')
-      .reduce((sum, a) => sum + a.value, 0);
+      .reduce((sum, a) => sum + (a.baseValue ?? convertToCHF(a.value, a.currency)), 0);
     const creditDebt = accounts
-      .filter(a => a.balance < 0)
-      .reduce((sum, a) => sum + Math.abs(a.balance), 0);
+      .filter(a => (a.balanceBase ?? a.balance) < 0)
+      .reduce((sum, a) => sum + Math.abs(a.balanceBase ?? convertToCHF(a.originalBalance ?? a.balance, a.originalCurrency || a.currency)), 0);
     return passivosVal + creditDebt;
   }, [assets, accounts]);
 
@@ -109,8 +108,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const availableBalance = useMemo(() => {
     return accounts
       .filter(a => a.type === 'CHECKING' || a.type === 'SAVINGS' || a.type === 'CASH')
-      .reduce((sum, a) => sum + Math.max(0, a.balance), 0);
+      .reduce((sum, a) => sum + Math.max(0, a.balanceBase ?? convertToCHF(a.originalBalance ?? a.balance, a.originalCurrency || a.currency)), 0);
   }, [accounts]);
+
+  const accountCurrencyBalances = useMemo(() => {
+    const balances = new Map<string, number>();
+    accounts.forEach(account => {
+      const currencyCode = account.originalCurrency || account.currency;
+      const originalBalance = account.originalBalance ?? account.balance;
+      balances.set(currencyCode, (balances.get(currencyCode) || 0) + originalBalance);
+    });
+    return Array.from(balances.entries()).map(([currencyCode, amount]) => ({
+      currencyCode,
+      amount,
+      conversionAvailable: currencyCode === currency || hasRateToCHF(currencyCode)
+    }));
+  }, [accounts, currency]);
 
   // Transactions for Selected Month
   const currentMonthTransactions = useMemo(() => {
@@ -126,19 +139,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const realizedIncome = useMemo(() => {
     return currentMonthTransactions
       .filter(t => t.transactionType === 'RECEITA')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
   }, [currentMonthTransactions]);
 
   const realizedExpenses = useMemo(() => {
     return currentMonthTransactions
       .filter(t => t.transactionType === 'DESPESA')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
   }, [currentMonthTransactions]);
 
   const realizedInvestments = useMemo(() => {
     return currentMonthTransactions
       .filter(t => t.transactionType === 'INVESTIMENTO')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
   }, [currentMonthTransactions]);
 
   const monthNetResult = realizedIncome - realizedExpenses;
@@ -148,13 +161,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const prevIncome = useMemo(() => {
     return previousMonthTransactions
       .filter(t => t.transactionType === 'RECEITA')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
   }, [previousMonthTransactions]);
 
   const prevExpenses = useMemo(() => {
     return previousMonthTransactions
       .filter(t => t.transactionType === 'DESPESA')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
   }, [previousMonthTransactions]);
 
   // Month-over-Month calculations
@@ -169,13 +182,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const patrimonialEvolutionData = useMemo(() => {
     if (chronologicalMonths.length === 0) return [];
 
-    let runningAccumulator = currentNetWorth;
     // Calculate historical points
     return chronologicalMonths.map((ym) => {
       const txsInMonth = getTransactionsForMonth(transactions, ym);
-      const inc = txsInMonth.filter(t => t.transactionType === 'RECEITA').reduce((s, t) => s + t.amount, 0);
-      const exp = txsInMonth.filter(t => t.transactionType === 'DESPESA').reduce((s, t) => s + t.amount, 0);
-      const inv = txsInMonth.filter(t => t.transactionType === 'INVESTIMENTO').reduce((s, t) => s + t.amount, 0);
+      const inc = txsInMonth.filter(t => t.transactionType === 'RECEITA').reduce((s, t) => s + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
+      const exp = txsInMonth.filter(t => t.transactionType === 'DESPESA').reduce((s, t) => s + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
+      const inv = txsInMonth.filter(t => t.transactionType === 'INVESTIMENTO').reduce((s, t) => s + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
       const net = inc - exp;
 
       return {
@@ -196,7 +208,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     .filter(t => t.transactionType === 'DESPESA' && (t.categoryName || t.categoryId))
     .forEach(t => {
       const name = t.categoryName || 'Outros';
-      categorySpendingMap[name] = (categorySpendingMap[name] || 0) + t.amount;
+      categorySpendingMap[name] = (categorySpendingMap[name] || 0) + getTransactionBaseAmount(t);
     });
 
   const categoryChartData = Object.entries(categorySpendingMap)
@@ -253,7 +265,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             transactions={transactions}
           />
 
-          <button
+          {canManageIntegrations && <button
             onClick={() => triggerLunchMoneySync()}
             disabled={isSyncing}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700/80 transition-all flex items-center gap-1.5 text-xs font-medium cursor-pointer disabled:opacity-50"
@@ -261,7 +273,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-blue-400' : ''}`} />
             <span className="hidden sm:inline">Sincronizar</span>
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -325,6 +337,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <p className="text-xs text-slate-400 mt-1">
               Contas correntes, poupança e caixa
             </p>
+            {accountCurrencyBalances.length > 0 && (
+              <div className="mt-3 space-y-1 border-t border-slate-800 pt-2">
+                {accountCurrencyBalances.map(balance => (
+                  <div key={balance.currencyCode} className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Original {balance.currencyCode}</span>
+                    <span className="font-mono text-slate-200">{formatCurrency(balance.amount, balance.currencyCode as any)}</span>
+                  </div>
+                ))}
+                {accountCurrencyBalances.some(balance => !balance.conversionAvailable) && (
+                  <p className="text-[10px] text-amber-300">Conversão indisponível: saldo original preservado.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -21,7 +21,7 @@ async function main() {
     process.exit(1);
   }
 
-  const client = new LunchMoneyClient(apiKey.trim());
+  const client = new LunchMoneyClient();
 
   // 1. Validar conexão com a API Real do Lunch Money
   let me;

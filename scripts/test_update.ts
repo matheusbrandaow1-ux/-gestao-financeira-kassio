@@ -10,7 +10,7 @@ async function testUpdate() {
   const urlV1 = `https://api.lunchmoney.dev/v1/transactions/${id}`;
   
   // First, get categories
-  const client = new LunchMoneyClient(apiKey);
+  const client = new LunchMoneyClient();
   const cats = await client.getCategories();
   console.log('Available categories in Lunch Money:');
   cats.categories?.slice(0, 10).forEach((c: any) => console.log(`- ${c.name} (id: ${c.id})`));

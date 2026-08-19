@@ -17,6 +17,21 @@ const MONTH_SHORT_PT = [
   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
 ];
 
+export function getMonthInTimeZone(date: Date, timeZone: string = 'Europe/Zurich'): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit'
+  }).formatToParts(date);
+  const year = parts.find(part => part.type === 'year')?.value;
+  const month = parts.find(part => part.type === 'month')?.value;
+  return year && month ? `${year}-${month}` : new Date().toISOString().slice(0, 7);
+}
+
+export function getCurrentMonth(timeZone: string = 'Europe/Zurich'): string {
+  return getMonthInTimeZone(new Date(), timeZone);
+}
+
 /**
  * Extracts all unique available months (YYYY-MM) from a transaction list,
  * sorted descending (most recent first) or ascending.
@@ -38,18 +53,13 @@ export function getAvailableMonths(
     }
   }
 
-  // Include standard planning horizon 2026-01 to 2027-12 if requested
-  if (includeFullHorizon) {
-    const horizon = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12', '2027-01', '2027-02', '2027-03', '2027-04', '2027-05', '2027-06'];
-    horizon.forEach(m => monthSet.add(m));
-  }
+  // Planning months must come from persisted plans, not from a future fixture.
+  // This argument remains for API compatibility with existing callers.
+  void includeFullHorizon;
 
   // If no transactions exist yet, add current year-month
   if (monthSet.size === 0) {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    monthSet.add(`${y}-${m}`);
+    monthSet.add(getCurrentMonth());
   }
 
   const sorted = Array.from(monthSet).sort((a, b) => {

@@ -7,20 +7,11 @@ import { CurrencyCode, FXRateTable } from '../types';
  * into base currency (CHF) for Swiss tax residency and wealth management.
  */
 
-// Reference exchange rates (Base: CHF)
-// 1 Unit of foreign currency = X CHF
-const DEFAULT_RATES_TO_CHF: Record<string, number> = {
-  'CHF': 1.0000,
-  'EUR': 0.9420,  // 1 EUR ≈ 0.942 CHF
-  'BRL': 0.1580,  // 1 BRL ≈ 0.158 CHF
-  'USD': 0.8840,  // 1 USD ≈ 0.884 CHF
-  'GBP': 1.1250,  // 1 GBP ≈ 1.125 CHF
-};
-
 class FXService {
   private static instance: FXService;
-  private ratesToCHF: Record<string, number> = { ...DEFAULT_RATES_TO_CHF };
-  private lastUpdated: string = new Date().toISOString();
+  private ratesToCHF: Record<string, number> = { CHF: 1 };
+  private lastUpdated: string = 'FALLBACK_NOT_PROVIDER_DATA';
+  private source: FXRateTable['source'] = 'FALLBACK';
 
   private constructor() {}
 
@@ -33,7 +24,11 @@ class FXService {
 
   public getRateToCHF(currency: string): number {
     const code = (currency || 'CHF').toUpperCase();
-    return this.ratesToCHF[code] || 1.0;
+    return this.ratesToCHF[code] || 0;
+  }
+
+  public hasRateToCHF(currency: string): boolean {
+    return this.getRateToCHF(currency) > 0;
   }
 
   public getExchangeRate(from: string, to: string = 'CHF'): number {
@@ -45,13 +40,14 @@ class FXService {
     const fromRateToCHF = this.getRateToCHF(fromCode);
     const toRateToCHF = this.getRateToCHF(toCode);
 
-    if (toRateToCHF === 0) return 1.0;
+    if (fromRateToCHF <= 0 || toRateToCHF <= 0) return 0;
     return fromRateToCHF / toRateToCHF;
   }
 
   public convert(amount: number, from: string, to: string = 'CHF'): number {
     if (!amount || isNaN(amount)) return 0;
     const rate = this.getExchangeRate(from, to);
+    if (rate <= 0) return 0;
     return Math.round(amount * rate * 100) / 100;
   }
 
@@ -60,19 +56,36 @@ class FXService {
       baseCurrency: 'CHF',
       rates: { ...this.ratesToCHF },
       lastUpdated: this.lastUpdated,
-      isRealTime: true
+      source: this.source,
+      isStale: this.source !== 'PROVIDER',
+      isRealTime: this.source === 'PROVIDER'
     };
   }
 
-  public setCustomRate(currency: string, rateToCHF: number): void {
+  public setProviderRate(currency: string, rateToCHF: number, timestamp: string = new Date().toISOString()): void {
     const code = currency.toUpperCase();
     if (rateToCHF > 0) {
       this.ratesToCHF[code] = rateToCHF;
-      this.lastUpdated = new Date().toISOString();
+      this.lastUpdated = timestamp;
+      this.source = 'PROVIDER';
     }
+  }
+
+  public setCachedRate(currency: string, rateToCHF: number, timestamp: string): void {
+    const code = currency.toUpperCase();
+    if (rateToCHF > 0) {
+      this.ratesToCHF[code] = rateToCHF;
+      this.lastUpdated = timestamp;
+      this.source = 'CACHED';
+    }
+  }
+
+  public setCustomRate(currency: string, rateToCHF: number): void {
+    this.setCachedRate(currency, rateToCHF, new Date().toISOString());
   }
 }
 
 export const fxService = FXService.getInstance();
 export const convertToCHF = (amount: number, currency: string) => fxService.convert(amount, currency, 'CHF');
 export const getRateToCHF = (currency: string) => fxService.getRateToCHF(currency);
+export const hasRateToCHF = (currency: string) => fxService.hasRateToCHF(currency);

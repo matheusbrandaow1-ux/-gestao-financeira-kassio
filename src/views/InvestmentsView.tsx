@@ -160,8 +160,9 @@ export const InvestmentsView: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-xs text-emerald-300">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>FX Dinâmico</span>
+            <span>{fxTable.source === 'PROVIDER' ? 'FX do provedor' : fxTable.source === 'CACHED' ? 'FX em cache' : 'FX fallback'}</span>
           </div>
+          <span className="text-[10px] text-slate-500">Atualizada em: {fxTable.source === 'FALLBACK' ? 'sem provedor' : new Date(fxTable.lastUpdated).toLocaleString('pt-BR')}</span>
         </div>
       </div>
 
@@ -204,7 +205,7 @@ export const InvestmentsView: React.FC = () => {
               R$ {brlPortfolio?.totalValueOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-              <span>Eq. {formatCurrency(brlPortfolio?.totalValueCHF || 0, baseCurrency)}</span>
+              <span>{fxService.hasRateToCHF('BRL') ? `Eq. ${formatCurrency(brlPortfolio?.totalValueCHF || 0, baseCurrency)}` : 'Conversão indisponível'}</span>
               <span className="text-emerald-400 font-medium">+5,34% rent.</span>
             </div>
           </div>
@@ -225,7 +226,7 @@ export const InvestmentsView: React.FC = () => {
               € {eurPortfolio?.totalValueOriginal.toLocaleString('de-CH', { minimumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-              <span>Eq. {formatCurrency(eurPortfolio?.totalValueCHF || 0, baseCurrency)}</span>
+              <span>{fxService.hasRateToCHF('EUR') ? `Eq. ${formatCurrency(eurPortfolio?.totalValueCHF || 0, baseCurrency)}` : 'Conversão indisponível'}</span>
               <span className="text-emerald-400 font-semibold flex items-center">
                 <ArrowUpRight className="w-3 h-3" />
                 +€ {eurPortfolio?.unrealizedProfitLossOriginal?.toFixed(2)} (+{eurPortfolio?.unrealizedProfitLossPercent}%)

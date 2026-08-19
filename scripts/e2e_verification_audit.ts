@@ -63,9 +63,9 @@ const convertedEur = fxService.convert(1666.92, 'EUR', 'CHF');
 const convertedBrl = fxService.convert(25808.15, 'BRL', 'CHF');
 
 assert(
-  eurRate > 0 && brlRate > 0 && chfRate === 1.0 && convertedEur > 0 && convertedBrl > 0,
-  'TEST D: Multi-Currency Portfolio FX Conversion (BRL/EUR/CHF -> CHF)',
-  `EUR 1.666,92 = ${convertedEur} CHF (rate: ${eurRate}) | BRL 25.808,15 = ${convertedBrl} CHF (rate: ${brlRate})`
+  eurRate === 0 && brlRate === 0 && chfRate === 1.0 && convertedEur === 0 && convertedBrl === 0,
+  'TEST D: Multi-Currency FX Without Provider Rate',
+  'BRL/EUR remain unavailable for consolidation instead of being summed nominally.'
 );
 
 // Test E: Portfolios Data & Asset Class Structure
@@ -75,12 +75,9 @@ const eurPort = portfolios.find(p => p.currency === 'EUR');
 const chfPort = portfolios.find(p => p.currency === 'CHF');
 
 assert(
-  portfolios.length === 3 &&
-  brlPort?.totalValueOriginal === 25808.15 &&
-  eurPort?.totalValueOriginal === 1666.92 &&
-  chfPort?.totalValueOriginal === 7056.00,
-  'TEST E: Multi-Currency Holdings & Portfolios Integrity',
-  `Portfolios: BRL R$ 25.808,15, EUR € 1.666,92, CHF 7.056,00`
+  portfolios.length === 0 && !brlPort && !eurPort && !chfPort,
+  'TEST E: No Invented Investment Fixtures',
+  'Investment totals remain empty until persisted/provider data is available.'
 );
 
 // Test F: Net Worth vs Monthly Result Separation
@@ -154,9 +151,9 @@ assert(
 // Test L: Full Calendar Horizon Support
 const fullCalendar = getAvailableMonths([], 'desc', true);
 assert(
-  fullCalendar.length >= 12 && fullCalendar.includes('2026-06') && fullCalendar.includes('2026-12') && fullCalendar.includes('2027-06'),
-  'TEST L: Full Multi-Year Dynamic Financial Horizon',
-  `Total selectable horizon months: ${fullCalendar.length}`
+  fullCalendar.length === 1 && /^\d{4}-\d{2}$/.test(fullCalendar[0]),
+  'TEST L: Dynamic Current-Month Fallback',
+  `Fallback month: ${fullCalendar[0]}`
 );
 
 console.log(`\n====================================================`);

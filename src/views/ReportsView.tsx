@@ -32,6 +32,8 @@ import {
 import { useClient } from '../context/ClientContext';
 import { formatCurrency, formatPercent } from '../lib/money';
 import { CanonicalTransaction } from '../types';
+import { getPreviousMonth, getTransactionsForMonth, formatMonthLabel } from '../lib/monthUtils';
+import { getTransactionBaseAmount } from '../lib/financialMetrics';
 
 export const ReportsView: React.FC = () => {
   const { 
@@ -40,7 +42,8 @@ export const ReportsView: React.FC = () => {
     categories, 
     assets, 
     netWorthHistory, 
-    monthlyPlan 
+    monthlyPlan,
+    selectedMonth
   } = useClient();
 
   const [timeRange, setTimeRange] = useState<'MONTH' | 'QUARTER' | 'YEAR'>('MONTH');
@@ -50,34 +53,29 @@ export const ReportsView: React.FC = () => {
 
   // Filter transactions based on time range
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
-      if (timeRange === 'MONTH') {
-        return t.date.startsWith('2026-08');
-      }
-      if (timeRange === 'QUARTER') {
-        return t.date >= '2026-06-01' && t.date <= '2026-08-31';
-      }
-      return t.date.startsWith('2026');
-    });
-  }, [transactions, timeRange]);
+    if (timeRange === 'MONTH') return getTransactionsForMonth(transactions, selectedMonth);
+    if (timeRange === 'YEAR') return transactions.filter(t => t.date.startsWith(selectedMonth.slice(0, 4)));
+    const quarterStart = getPreviousMonth(getPreviousMonth(selectedMonth));
+    return transactions.filter(t => t.date.startsWith(quarterStart) || t.date.startsWith(getPreviousMonth(selectedMonth)) || t.date.startsWith(selectedMonth));
+  }, [transactions, timeRange, selectedMonth]);
 
   // Aggregate Metrics
   const totalIncome = useMemo(() => {
     return filteredTransactions
       .filter(t => t.transactionType === 'RECEITA')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [filteredTransactions]);
 
   const totalExpenses = useMemo(() => {
     return filteredTransactions
       .filter(t => t.transactionType === 'DESPESA')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [filteredTransactions]);
 
   const totalInvestments = useMemo(() => {
     return filteredTransactions
       .filter(t => t.transactionType === 'INVESTIMENTO')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [filteredTransactions]);
 
   const netSavings = totalIncome - totalExpenses;
@@ -98,7 +96,7 @@ export const ReportsView: React.FC = () => {
         if (!map[catName]) {
           map[catName] = { name: catName, amount: 0, color, groupName: group };
         }
-        map[catName].amount += t.amount;
+        map[catName].amount += getTransactionBaseAmount(t);
       });
 
     return Object.values(map).sort((a, b) => b.amount - a.amount);
@@ -106,21 +104,25 @@ export const ReportsView: React.FC = () => {
 
   // Monthly Cash Flow Chart Data
   const monthlyCashflowData = useMemo(() => {
-    const months = ['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'];
+    const months = Array.from({ length: 6 }, (_, index) => {
+      let month = selectedMonth;
+      for (let offset = 0; offset < 5 - index; offset++) month = getPreviousMonth(month);
+      return month;
+    });
     return months.map(m => {
-      const monthTxs = transactions.filter(t => t.date.startsWith(m));
-      const inc = monthTxs.filter(t => t.transactionType === 'RECEITA').reduce((s, t) => s + t.amount, 0);
-      const exp = monthTxs.filter(t => t.transactionType === 'DESPESA').reduce((s, t) => s + t.amount, 0);
-      const inv = monthTxs.filter(t => t.transactionType === 'INVESTIMENTO').reduce((s, t) => s + t.amount, 0);
+      const monthTxs = getTransactionsForMonth(transactions, m);
+      const inc = monthTxs.filter(t => t.transactionType === 'RECEITA').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
+      const exp = monthTxs.filter(t => t.transactionType === 'DESPESA').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
+      const inv = monthTxs.filter(t => t.transactionType === 'INVESTIMENTO').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
       return {
-        month: m.replace('2026-', 'Mês '),
+        month: formatMonthLabel(m, 'chart'),
         Receitas: inc,
         Despesas: exp,
         Investimentos: inv,
         Saldo: inc - exp
       };
     });
-  }, [transactions]);
+  }, [transactions, selectedMonth]);
 
   // Export CSV
   const handleExportCSV = () => {
@@ -175,7 +177,7 @@ export const ReportsView: React.FC = () => {
                 timeRange === 'MONTH' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Mês Atual (Ago/26)
+              Mês Atual ({formatMonthLabel(selectedMonth, 'short')})
             </button>
             <button
               onClick={() => setTimeRange('QUARTER')}
@@ -191,7 +193,7 @@ export const ReportsView: React.FC = () => {
                 timeRange === 'YEAR' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Ano 2026
+              Ano {selectedMonth.slice(0, 4)}
             </button>
           </div>
 

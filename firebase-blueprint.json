@@ -19,7 +19,6 @@
           "title": "Integration",
           "properties": {
             "status": { "type": "string" },
-            "tokenLast4": { "type": "string" },
             "connectedAt": { "type": "string" },
             "lastValidatedAt": { "type": "string" },
             "lunchMoneyUserId": { "type": "string" },

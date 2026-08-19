@@ -6,7 +6,7 @@ import { GoogleGenAI } from '@google/genai';
 
 async function diagnose() {
   const apiKey = process.env.LUNCH_MONEY_API_KEY;
-  const client = new LunchMoneyClient(apiKey);
+  const client = new LunchMoneyClient();
   const categoriesRes = await client.getCategories({ format: 'flattened' });
   const rawCategories = categoriesRes.categories || [];
   const assignableCategories: AssignableCategoryInfo[] = rawCategories

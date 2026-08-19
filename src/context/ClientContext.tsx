@@ -14,18 +14,10 @@ import {
   AuditLog,
   NetWorthHistoryPoint
 } from '../types';
-import { 
-  db, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  collection, 
-  getDocs, 
-  deleteDoc, 
-  writeBatch 
-} from '../lib/firebase';
+import { db, doc, getDoc, setDoc, collection, getDocs, deleteDoc, writeBatch } from '../lib/apiData';
 import { applyRulesToTransaction } from '../lib/rulesEngine';
 import { useAuth } from './AuthContext';
+import { getCurrentMonth } from '../lib/monthUtils';
 
 export const REAL_KASSIO_CLIENT: ClientProfile = {
   id: 'kassio-pf',
@@ -53,15 +45,16 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat-investments', groupId: 'grp-invest', groupName: 'Investimentos', name: 'Investimentos Globais (ETFs/Ações)', type: 'INVESTIMENTO', color: '#0D9488', icon: 'Coins', isSystem: true, subcategories: ['ETFs Globais', 'Ações'] }
 ];
 
+const INITIAL_MONTH = getCurrentMonth();
 const INITIAL_EMPTY_PLAN: MonthlyPlan = {
-  id: 'plan-2026-08',
+  id: `plan-${INITIAL_MONTH}`,
   clientId: 'kassio-pf',
-  month: '2026-08',
+  month: INITIAL_MONTH,
   plannedIncome: 0,
   plannedExpenses: 0,
   plannedInvestments: 0,
   categoryPlans: {},
-  createdAt: '2026-08-01T00:00:00Z',
+  createdAt: `${INITIAL_MONTH}-01T00:00:00Z`,
   updatedAt: new Date().toISOString()
 };
 
@@ -71,6 +64,8 @@ interface ClientContextType {
   setActiveClient: (client: ClientProfile) => void;
   createClient: (client: Omit<ClientProfile, 'createdAt' | 'updatedAt'>) => Promise<void>;
   isLoading: boolean;
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
   
   // Data entities
   accounts: CanonicalAccount[];
@@ -140,6 +135,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activeClient, setActiveClientState] = useState<ClientProfile>(REAL_KASSIO_CLIENT);
   const [clientsList, setClientsList] = useState<ClientProfile[]>([REAL_KASSIO_CLIENT]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => getCurrentMonth());
 
   // Clean real entities state (no mock demo data)
   const [accounts, setAccounts] = useState<CanonicalAccount[]>([]);
@@ -274,22 +270,7 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (isMounted) setRules([]);
         }
 
-        // 6. Load Monthly Plan
-        try {
-          const planDoc = await getDoc(doc(db, 'clients', targetId, 'monthlyPlans', '2026-08'));
-          if (planDoc.exists() && isMounted) {
-            setMonthlyPlan(planDoc.data() as MonthlyPlan);
-          } else if (isMounted) {
-            setMonthlyPlan({
-              ...INITIAL_EMPTY_PLAN,
-              clientId: targetId
-            });
-          }
-        } catch {
-          if (isMounted) setMonthlyPlan({ ...INITIAL_EMPTY_PLAN, clientId: targetId });
-        }
-
-        // 7. Goals
+        // 6. Goals
         try {
           const goalSnap = await getDocs(collection(db, 'clients', targetId, 'goals'));
           if (!goalSnap.empty && isMounted) {
@@ -331,7 +312,19 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (isMounted) setRecurringItems([]);
         }
 
-        // 10. Sync status & Integration info from server
+        // 10. Pending items (server-side, audit-preserving)
+        try {
+          const pendingSnap = await getDocs(collection(db, 'clients', targetId, 'pendingItems'));
+          if (isMounted) {
+            const items: PendingItem[] = [];
+            pendingSnap.forEach(d => items.push({ ...d.data() as PendingItem, id: d.id }));
+            setPendingItems(items);
+          }
+        } catch {
+          if (isMounted) setPendingItems([]);
+        }
+
+        // 11. Sync status & Integration info from server
         try {
           const res = await fetch(`/api/lunchmoney/integration?clientId=${encodeURIComponent(targetId)}`);
           if (res.ok) {
@@ -361,6 +354,25 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       isMounted = false;
     };
   }, [user, activeClient.id, isClientRole, authClientId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadMonthlyPlan() {
+      if (!user) return;
+      try {
+        const planDoc = await getDoc(doc(db, 'clients', currentTargetClientId, 'monthlyPlans', selectedMonth));
+        if (isMounted) {
+          setMonthlyPlan(planDoc.exists()
+            ? planDoc.data() as MonthlyPlan
+            : { ...INITIAL_EMPTY_PLAN, id: `plan-${selectedMonth}`, month: selectedMonth, clientId: currentTargetClientId });
+        }
+      } catch {
+        if (isMounted) setMonthlyPlan({ ...INITIAL_EMPTY_PLAN, id: `plan-${selectedMonth}`, month: selectedMonth, clientId: currentTargetClientId });
+      }
+    }
+    void loadMonthlyPlan();
+    return () => { isMounted = false; };
+  }, [user, currentTargetClientId, selectedMonth]);
 
   // Set active client (Consultant only)
   const setActiveClient = (client: ClientProfile) => {
@@ -445,12 +457,12 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     setPendingItems(prev => {
       const updated = [...prev];
-      const uncatIdx = updated.findIndex(p => p.type === 'SEM_CATEGORIA');
+      const uncatIdx = updated.findIndex(p => p.type === 'UNCATEGORIZED' || p.type === 'SEM_CATEGORIA');
       if (uncategorizedCount > 0) {
         const item: PendingItem = {
           id: 'pend-uncat',
           clientId: currentTargetClientId,
-          type: 'SEM_CATEGORIA',
+          type: 'UNCATEGORIZED',
           title: `${uncategorizedCount} transação(ões) sem categoria`,
           description: `Existem ${uncategorizedCount} movimentações aguardando classificação orçamentária.`,
           severity: 'AVISO',
@@ -462,8 +474,11 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         };
         if (uncatIdx >= 0) updated[uncatIdx] = item;
         else updated.unshift(item);
+        void setDoc(doc(db, 'clients', currentTargetClientId, 'pendingItems', item.id), item, { merge: true });
       } else if (uncatIdx >= 0) {
-        updated.splice(uncatIdx, 1);
+        const resolved = { ...updated[uncatIdx], isResolved: true, resolvedAt: new Date().toISOString(), resolvedBy: user?.uid || 'system', resolutionNote: 'Não há mais transações sem categoria.' };
+        updated[uncatIdx] = resolved;
+        void setDoc(doc(db, 'clients', currentTargetClientId, 'pendingItems', resolved.id), resolved, { merge: true });
       }
 
       return updated;
@@ -926,7 +941,25 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const resolvePendingItem = async (id: string) => {
-    setPendingItems(prev => prev.filter(p => p.id !== id));
+    const resolvedAt = new Date().toISOString();
+    const resolvedBy = user?.uid || 'user-primary';
+    setPendingItems(prev => prev.map(item => item.id === id ? {
+      ...item,
+      isResolved: true,
+      resolvedAt,
+      resolvedBy,
+      resolutionNote: 'Resolvida pelo usuário autenticado.'
+    } : item));
+    const item = pendingItems.find(current => current.id === id);
+    if (item) {
+      await setDoc(doc(db, 'clients', currentTargetClientId, 'pendingItems', id), {
+        ...item,
+        isResolved: true,
+        resolvedAt,
+        resolvedBy,
+        resolutionNote: 'Resolvida pelo usuário autenticado.'
+      }, { merge: true });
+    }
   };
 
   // Lunch Money Sync Trigger
@@ -1046,6 +1079,8 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setActiveClient,
       createClient,
       isLoading,
+      selectedMonth,
+      setSelectedMonth,
       accounts,
       transactions,
       categories,
