@@ -212,9 +212,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     });
 
   const categoryChartData = Object.entries(categorySpendingMap)
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, value]) => ({ name, value: Math.abs(value) }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
+
+  const categorizedExpensesTotal = Object.values(categorySpendingMap)
+    .reduce((sum, value) => sum + Math.abs(value), 0);
 
   const PIE_COLORS = ['#2563EB', '#0D9488', '#3B82F6', '#8B5CF6', '#F59E0B', '#64748B'];
 
@@ -533,7 +536,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
               <div className="space-y-2 pt-2 border-t border-slate-800">
                 {categoryChartData.map((item, idx) => {
-                  const percent = realizedExpenses > 0 ? (item.value / realizedExpenses) * 100 : 0;
+                  const percent = categorizedExpensesTotal > 0 ? item.value / categorizedExpensesTotal : 0;
                   return (
                     <div key={item.name} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">

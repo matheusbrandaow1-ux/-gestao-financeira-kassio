@@ -31,18 +31,61 @@ import {
   YAxis 
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
-import { InvestmentPortfolio, InvestmentHolding, CurrencyCode } from '../types';
+import { AssetOrLiability, InvestmentPortfolio, InvestmentHolding, CurrencyCode } from '../types';
 import { formatCurrency, formatPercent } from '../lib/money';
 import { fxService } from '../lib/fxService';
-import { getDefaultPortfolios } from '../lib/investmentData';
 
 const ALLOCATION_COLORS = ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EC4899', '#8B5CF6'];
 
 export const InvestmentsView: React.FC = () => {
-  const { activeClient } = useClient();
+  const { activeClient, assets } = useClient();
   const baseCurrency = activeClient.baseCurrency || 'CHF';
 
-  const [portfolios, setPortfolios] = useState<InvestmentPortfolio[]>(() => getDefaultPortfolios(activeClient.id));
+  const portfolios = useMemo(() => {
+    const investmentAssets = assets.filter(asset =>
+      asset.classification === 'ATIVO' &&
+      (asset.category === 'INVESTIMENTO_LIQUIDO' || asset.category === 'PREVIDENCIA_3A')
+    );
+    const portfoliosByInstitution = new Map<string, InvestmentPortfolio>();
+
+    investmentAssets.forEach((asset: AssetOrLiability) => {
+      const institution = asset.institution || 'Custódia não informada';
+      const originalValue = asset.originalValue ?? asset.value;
+      const storedBaseValue = asset.baseValue;
+      const rate = asset.currency === 'CHF' ? 1 : fxService.getRateToCHF(asset.currency);
+      const currentValueCHF = storedBaseValue ?? (rate > 0 ? Math.round(originalValue * rate * 100) / 100 : 0);
+      const holding: InvestmentHolding = {
+        id: asset.id,
+        name: asset.name,
+        assetClass: asset.category === 'PREVIDENCIA_3A' ? 'PENSION_3A' : 'OUTROS',
+        currency: asset.currency,
+        currentValueOriginal: originalValue,
+        currentValueCHF,
+        exchangeRateToCHF: storedBaseValue !== undefined && originalValue > 0 ? storedBaseValue / originalValue : rate,
+        institution,
+        notes: asset.notes,
+        updatedAt: asset.updatedAt
+      };
+      const existing = portfoliosByInstitution.get(institution);
+      if (existing) {
+        existing.holdings.push(holding);
+      } else {
+        portfoliosByInstitution.set(institution, {
+          id: `portfolio-${institution}`,
+          clientId: asset.clientId,
+          name: institution,
+          currency: asset.currency,
+          country: asset.currency === 'BRL' ? 'BRASIL' : asset.currency === 'EUR' ? 'EUROPA' : 'SUÍÇA',
+          totalValueOriginal: 0,
+          totalValueCHF: 0,
+          holdings: [holding],
+          updatedAt: asset.updatedAt
+        });
+      }
+    });
+
+    return Array.from(portfoliosByInstitution.values());
+  }, [assets]);
   const [selectedCurrencyFilter, setSelectedCurrencyFilter] = useState<'ALL' | CurrencyCode>('ALL');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingHolding, setEditingHolding] = useState<InvestmentHolding | null>(null);
