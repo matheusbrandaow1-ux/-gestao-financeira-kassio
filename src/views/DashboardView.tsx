@@ -37,6 +37,7 @@ import { getCapabilities } from '../lib/capabilities';
 import { formatCurrency, formatPercent, calculateProgressPercent } from '../lib/money';
 import { convertToCHF, hasRateToCHF } from '../lib/fxService';
 import { getTransactionBaseAmount } from '../lib/financialMetrics';
+import { getOriginalInvestmentValue, isInvestmentAsset } from '../lib/investmentData';
 import { TabType } from '../components/common/Sidebar';
 import { MonthSelector } from '../components/common/MonthSelector';
 import { 
@@ -56,11 +57,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const { 
     activeClient, 
     accounts, 
+    accountsLoadState,
     transactions, 
+    transactionsLoadState,
     categories, 
     monthlyPlan, 
     goals, 
     assets, 
+    assetsLoadState,
     recurringItems, 
     pendingItems,
     syncStatus,
@@ -82,34 +86,93 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   // Compute Current Balances & Net Worth (Real-time account & asset balance)
   const totalAssets = useMemo(() => {
+    let conversionAvailable = true;
     const assetsVal = assets
       .filter(a => a.classification === 'ATIVO')
-      .reduce((sum, a) => sum + (a.baseValue ?? convertToCHF(a.value, a.currency)), 0);
+      .reduce((sum, a) => {
+        if (a.baseValue !== undefined) return sum + a.baseValue;
+        if (a.currency === currency) return sum + a.value;
+        if (!hasRateToCHF(a.currency)) {
+          conversionAvailable = false;
+          return sum;
+        }
+        return sum + convertToCHF(a.value, a.currency);
+      }, 0);
     const accountsVal = accounts.reduce((sum, account) => {
       const originalBalance = account.originalBalance ?? account.balance;
-      return sum + Math.max(0, account.balanceBase ?? convertToCHF(originalBalance, account.originalCurrency || account.currency));
+      const accountCurrency = account.originalCurrency || account.currency;
+      if (account.balanceBase !== undefined) return sum + Math.max(0, account.balanceBase);
+      if (accountCurrency === currency) return sum + Math.max(0, originalBalance);
+      if (!hasRateToCHF(accountCurrency)) {
+        conversionAvailable = false;
+        return sum;
+      }
+      return sum + Math.max(0, convertToCHF(originalBalance, accountCurrency));
     }, 0);
-    return assetsVal + accountsVal;
-  }, [assets, accounts]);
+    return conversionAvailable ? assetsVal + accountsVal : null;
+  }, [assets, accounts, currency]);
 
   const totalLiabilities = useMemo(() => {
+    let conversionAvailable = true;
     const passivosVal = assets
       .filter(a => a.classification === 'PASSIVO')
-      .reduce((sum, a) => sum + (a.baseValue ?? convertToCHF(a.value, a.currency)), 0);
+      .reduce((sum, a) => {
+        if (a.baseValue !== undefined) return sum + a.baseValue;
+        if (a.currency === currency) return sum + a.value;
+        if (!hasRateToCHF(a.currency)) {
+          conversionAvailable = false;
+          return sum;
+        }
+        return sum + convertToCHF(a.value, a.currency);
+      }, 0);
     const creditDebt = accounts
       .filter(a => (a.balanceBase ?? a.balance) < 0)
-      .reduce((sum, a) => sum + Math.abs(a.balanceBase ?? convertToCHF(a.originalBalance ?? a.balance, a.originalCurrency || a.currency)), 0);
-    return passivosVal + creditDebt;
-  }, [assets, accounts]);
+      .reduce((sum, account) => {
+        const originalBalance = account.originalBalance ?? account.balance;
+        const accountCurrency = account.originalCurrency || account.currency;
+        if (account.balanceBase !== undefined) return sum + Math.abs(account.balanceBase);
+        if (accountCurrency === currency) return sum + Math.abs(originalBalance);
+        if (!hasRateToCHF(accountCurrency)) {
+          conversionAvailable = false;
+          return sum;
+        }
+        return sum + Math.abs(convertToCHF(originalBalance, accountCurrency));
+      }, 0);
+    return conversionAvailable ? passivosVal + creditDebt : null;
+  }, [assets, accounts, currency]);
 
-  const currentNetWorth = totalAssets - totalLiabilities;
+  const currentNetWorth = totalAssets !== null && totalLiabilities !== null
+    ? totalAssets - totalLiabilities
+    : null;
+  const formatBaseValue = (value: number | null, sourceHasData: boolean, sourceHasError: boolean) => {
+    if (sourceHasError) return 'Não foi possível carregar os dados';
+    if (!sourceHasData) return 'Nenhum dado registrado';
+    return value === null ? 'Conversão indisponível' : formatCurrency(value, currency);
+  };
+  const formatTransactionValue = (value: number, hasMatchingTransactions: boolean, sign = '') => {
+    if (transactionsLoadState === 'error') return 'Não foi possível carregar os dados';
+    if (transactionsLoadState === 'empty' || !hasMatchingTransactions) return 'Nenhuma movimentação';
+    return `${sign}${formatCurrency(value, currency)}`;
+  };
 
   // Available Liquid Balance (Checking + Cash + Savings)
   const availableBalance = useMemo(() => {
-    return accounts
+    let conversionAvailable = true;
+    const total = accounts
       .filter(a => a.type === 'CHECKING' || a.type === 'SAVINGS' || a.type === 'CASH')
-      .reduce((sum, a) => sum + Math.max(0, a.balanceBase ?? convertToCHF(a.originalBalance ?? a.balance, a.originalCurrency || a.currency)), 0);
-  }, [accounts]);
+      .reduce((sum, account) => {
+        const originalBalance = account.originalBalance ?? account.balance;
+        const accountCurrency = account.originalCurrency || account.currency;
+        if (account.balanceBase !== undefined) return sum + Math.max(0, account.balanceBase);
+        if (accountCurrency === currency) return sum + Math.max(0, originalBalance);
+        if (!hasRateToCHF(accountCurrency)) {
+          conversionAvailable = false;
+          return sum;
+        }
+        return sum + Math.max(0, convertToCHF(originalBalance, accountCurrency));
+      }, 0);
+    return conversionAvailable ? total : null;
+  }, [accounts, currency]);
 
   const accountCurrencyBalances = useMemo(() => {
     const balances = new Map<string, number>();
@@ -242,19 +305,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   const pendingUnresolved = pendingItems.filter(p => !p.isResolved);
   const uncategorizedCount = currentMonthTransactions.filter(t => !t.categoryId || t.categoryId === 'cat-none').length;
-  const investmentAssets = assets.filter(asset =>
-    asset.classification === 'ATIVO' &&
-    (asset.category === 'INVESTIMENTO_LIQUIDO' || asset.category === 'PREVIDENCIA_3A')
-  );
+  const investmentAssets = assets.filter(isInvestmentAsset);
   const investmentGroups = [
     { currency: 'BRL' as const, label: 'Grupo Brasil' },
     { currency: 'EUR' as const, label: 'Grupo Europa' },
     { currency: 'CHF' as const, label: 'Grupo Suíça' }
   ].map(group => {
     const holdings = investmentAssets.filter(asset => asset.currency === group.currency);
-    const originalTotal = holdings.reduce((sum, asset) => sum + (asset.originalValue ?? asset.value), 0);
+    const originalTotal = holdings.reduce((sum, asset) => sum + getOriginalInvestmentValue(asset), 0);
     const convertedHoldings = holdings.filter(asset => asset.baseValue !== undefined || group.currency === currency || hasRateToCHF(group.currency));
-    const convertedTotal = convertedHoldings.reduce((sum, asset) => sum + (asset.baseValue ?? convertToCHF(asset.originalValue ?? asset.value, asset.currency)), 0);
+    const convertedTotal = convertedHoldings.reduce((sum, asset) => sum + (asset.baseValue ?? convertToCHF(getOriginalInvestmentValue(asset), asset.currency)), 0);
     const institutions = Array.from(new Set(holdings.map(asset => asset.institution || 'Custódia não informada')));
     return { ...group, holdings, originalTotal, convertedTotal, institutions, conversionAvailable: holdings.length === convertedHoldings.length };
   });
@@ -328,12 +388,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Patrimônio líquido</p>
             <div className="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight text-slate-50 font-mono">
-              {formatCurrency(currentNetWorth, currency)}
+              {formatBaseValue(currentNetWorth, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}
             </div>
             <div className="mt-5 grid grid-cols-3 gap-4 max-w-xl">
-              <div><p className="text-[11px] text-slate-500">Liquidez</p><p className="mt-1 text-sm font-mono text-slate-200">{formatCurrency(availableBalance, currency)}</p></div>
-              <div><p className="text-[11px] text-slate-500">Ativos</p><p className="mt-1 text-sm font-mono text-slate-200">{formatCurrency(totalAssets, currency)}</p></div>
-              <div><p className="text-[11px] text-slate-500">Passivos</p><p className="mt-1 text-sm font-mono text-rose-300">{formatCurrency(totalLiabilities, currency)}</p></div>
+              <div><p className="text-[11px] text-slate-500">Liquidez</p><p className="mt-1 text-sm font-mono text-slate-200">{formatBaseValue(availableBalance, accounts.length > 0, accountsLoadState === 'error')}</p></div>
+              <div><p className="text-[11px] text-slate-500">Ativos</p><p className="mt-1 text-sm font-mono text-slate-200">{formatBaseValue(totalAssets, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}</p></div>
+              <div><p className="text-[11px] text-slate-500">Passivos</p><p className="mt-1 text-sm font-mono text-rose-300">{formatBaseValue(totalLiabilities, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}</p></div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-l border-slate-800/80 pl-6">
@@ -357,12 +417,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-slate-100">
-              {formatCurrency(currentNetWorth, currency)}
+              {formatBaseValue(currentNetWorth, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}
             </div>
             <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
-              <span>Ativos: {formatCurrency(totalAssets, currency)}</span>
+              <span>Ativos: {formatBaseValue(totalAssets, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}</span>
               <span>•</span>
-              <span>Passivos: {formatCurrency(totalLiabilities, currency)}</span>
+              <span>Passivos: {formatBaseValue(totalLiabilities, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}</span>
             </div>
           </div>
         </div>
@@ -374,7 +434,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-slate-100">
-              {formatCurrency(availableBalance, currency)}
+              {formatBaseValue(availableBalance, accounts.length > 0, accountsLoadState === 'error')}
             </div>
             <p className="text-xs text-slate-400 mt-1">
               Contas correntes, poupança e caixa
@@ -402,7 +462,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-emerald-400">
-              +{formatCurrency(realizedIncome, currency)}
+              {formatTransactionValue(realizedIncome, currentMonthTransactions.some(t => t.transactionType === 'RECEITA'), '+')}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
               {incomeMoM !== null ? (
@@ -424,7 +484,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold font-mono text-rose-400">
-              -{formatCurrency(realizedExpenses, currency)}
+              {formatTransactionValue(realizedExpenses, currentMonthTransactions.some(t => t.transactionType === 'DESPESA'), '-')}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
               <span className={`font-semibold ${monthNetResult >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -460,11 +520,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500 mt-1">{group.currency}</p>
                 </div>
                 <p className="text-sm font-mono text-slate-100">
-                  {formatCurrency(group.originalTotal, group.currency)}
+                  {group.holdings.length > 0
+                    ? formatCurrency(group.originalTotal, group.currency)
+                    : assetsLoadState === 'error'
+                      ? 'Não foi possível carregar os dados'
+                      : assetsLoadState === 'loading'
+                        ? 'Carregando dados...'
+                        : 'Nenhuma posição registrada'}
                 </p>
               </div>
               <p className="text-[11px] text-slate-500 mt-3 truncate" title={group.institutions.join(' · ')}>
-                {group.institutions.length > 0 ? group.institutions.join(' · ') : 'Nenhuma posição registrada'}
+                {assetsLoadState === 'error'
+                  ? 'Não foi possível carregar os dados'
+                  : group.institutions.length > 0 ? group.institutions.join(' · ') : 'Nenhuma posição registrada'}
               </p>
               {group.holdings.length > 0 && (
                 <div className="mt-3 space-y-1.5">

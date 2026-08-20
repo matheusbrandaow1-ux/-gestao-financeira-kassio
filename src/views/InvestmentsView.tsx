@@ -34,24 +34,21 @@ import { useClient } from '../context/ClientContext';
 import { AssetOrLiability, InvestmentPortfolio, InvestmentHolding, CurrencyCode } from '../types';
 import { formatCurrency, formatPercent } from '../lib/money';
 import { fxService } from '../lib/fxService';
-import { getDefaultPortfolios } from '../lib/investmentData';
+import { getDefaultPortfolios, getOriginalInvestmentValue, isInvestmentAsset } from '../lib/investmentData';
 
 const ALLOCATION_COLORS = ['#34D399', '#F59E0B', '#FB7185', '#A3E635', '#F97316', '#94A3B8'];
 
 export const InvestmentsView: React.FC = () => {
-  const { activeClient, assets } = useClient();
+  const { activeClient, assets, assetsLoadState } = useClient();
   const baseCurrency = activeClient.baseCurrency || 'CHF';
 
   const portfolios = useMemo(() => {
-    const investmentAssets = assets.filter(asset =>
-      asset.classification === 'ATIVO' &&
-      (asset.category === 'INVESTIMENTO_LIQUIDO' || asset.category === 'PREVIDENCIA_3A')
-    );
+    const investmentAssets = assets.filter(isInvestmentAsset);
     const portfoliosByInstitution = new Map<string, InvestmentPortfolio>();
 
     investmentAssets.forEach((asset: AssetOrLiability) => {
       const institution = asset.institution || 'Custódia não informada';
-      const originalValue = asset.originalValue ?? asset.value;
+      const originalValue = getOriginalInvestmentValue(asset);
       const storedBaseValue = asset.baseValue;
       const rate = asset.currency === 'CHF' ? 1 : fxService.getRateToCHF(asset.currency);
       const currentValueCHF = storedBaseValue ?? (rate > 0 ? Math.round(originalValue * rate * 100) / 100 : 0);
@@ -87,8 +84,10 @@ export const InvestmentsView: React.FC = () => {
 
     return portfoliosByInstitution.size > 0
       ? Array.from(portfoliosByInstitution.values())
-      : getDefaultPortfolios(activeClient.id);
-  }, [activeClient.id, assets]);
+      : activeClient.isDemo
+        ? getDefaultPortfolios(activeClient.id)
+        : [];
+  }, [activeClient.id, activeClient.isDemo, assets]);
   const [selectedCurrencyFilter, setSelectedCurrencyFilter] = useState<'ALL' | CurrencyCode>('ALL');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingHolding, setEditingHolding] = useState<InvestmentHolding | null>(null);
@@ -127,9 +126,18 @@ export const InvestmentsView: React.FC = () => {
     return enrichedPortfolios.reduce((sum, p) => sum + p.totalValueCHF, 0);
   }, [enrichedPortfolios]);
 
-  const hasCompleteFX = enrichedPortfolios.every(portfolio =>
+  const hasCompleteFX = enrichedPortfolios.length > 0 && enrichedPortfolios.every(portfolio =>
     portfolio.holdings.every(holding => holding.currency === 'CHF' || fxService.hasRateToCHF(holding.currency))
   );
+  const investmentSummary = assetsLoadState === 'error'
+    ? 'Não foi possível carregar os dados'
+    : assetsLoadState === 'loading'
+      ? 'Carregando dados...'
+      : enrichedPortfolios.length === 0
+        ? 'Nenhuma posição registrada'
+        : hasCompleteFX
+          ? formatCurrency(totalInvestedCHF, baseCurrency)
+          : 'Conversão CHF indisponível';
 
   // Specific portfolio values
   const brlPortfolio = enrichedPortfolios.find(p => p.currency === 'BRL');
@@ -231,7 +239,7 @@ export const InvestmentsView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-100">
-              {hasCompleteFX ? formatCurrency(totalInvestedCHF, baseCurrency) : 'Conversão CHF indisponível'}
+              {investmentSummary}
             </div>
             <div className="text-xs text-emerald-400 flex items-center gap-1 mt-1 font-medium">
               <TrendingUp className="w-3.5 h-3.5" />
@@ -252,11 +260,13 @@ export const InvestmentsView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-100">
-              {brlPortfolio ? `R$ ${brlPortfolio.totalValueOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Sem posição BRL'}
+              {assetsLoadState === 'error'
+                ? 'Não foi possível carregar os dados'
+                : brlPortfolio ? `R$ ${brlPortfolio.totalValueOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Sem posição BRL'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-              <span>{fxService.hasRateToCHF('BRL') ? `Eq. ${formatCurrency(brlPortfolio?.totalValueCHF || 0, baseCurrency)}` : 'Conversão indisponível'}</span>
-              <span className="text-emerald-400 font-medium">+5,34% rent.</span>
+              <span>{fxService.hasRateToCHF('BRL') && brlPortfolio ? `Eq. ${formatCurrency(brlPortfolio.totalValueCHF, baseCurrency)}` : 'Conversão indisponível'}</span>
+              <span className="text-slate-500 font-medium">Rentabilidade na posição</span>
             </div>
           </div>
         </div>
@@ -273,13 +283,15 @@ export const InvestmentsView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-100">
-              {eurPortfolio ? `€ ${eurPortfolio.totalValueOriginal.toLocaleString('de-CH', { minimumFractionDigits: 2 })}` : 'Sem posição EUR'}
+              {assetsLoadState === 'error'
+                ? 'Não foi possível carregar os dados'
+                : eurPortfolio ? `€ ${eurPortfolio.totalValueOriginal.toLocaleString('de-CH', { minimumFractionDigits: 2 })}` : 'Sem posição EUR'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-              <span>{fxService.hasRateToCHF('EUR') ? `Eq. ${formatCurrency(eurPortfolio?.totalValueCHF || 0, baseCurrency)}` : 'Conversão indisponível'}</span>
+              <span>{fxService.hasRateToCHF('EUR') && eurPortfolio ? `Eq. ${formatCurrency(eurPortfolio.totalValueCHF, baseCurrency)}` : 'Conversão indisponível'}</span>
               <span className="text-emerald-400 font-semibold flex items-center">
                 <ArrowUpRight className="w-3 h-3" />
-                +€ {eurPortfolio?.unrealizedProfitLossOriginal?.toFixed(2)} (+{eurPortfolio?.unrealizedProfitLossPercent}%)
+                P/L na posição
               </span>
             </div>
           </div>
@@ -297,7 +309,9 @@ export const InvestmentsView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl font-bold text-slate-100">
-              {chfPortfolio ? formatCurrency(chfPortfolio.totalValueOriginal, 'CHF') : 'Sem posição CHF'}
+              {assetsLoadState === 'error'
+                ? 'Não foi possível carregar os dados'
+                : chfPortfolio ? formatCurrency(chfPortfolio.totalValueOriginal, 'CHF') : 'Sem posição CHF'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
               <span>VIAC / 3a Global</span>
@@ -468,7 +482,17 @@ export const InvestmentsView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {displayedHoldings.map((h) => {
+              {displayedHoldings.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-10 px-4 text-center text-slate-500">
+                    {assetsLoadState === 'error'
+                      ? 'Não foi possível carregar os dados'
+                      : assetsLoadState === 'loading'
+                        ? 'Carregando dados...'
+                        : 'Nenhuma posição registrada'}
+                  </td>
+                </tr>
+              ) : displayedHoldings.map((h) => {
                 const isPositive = (h.unrealizedProfitLossOriginal || 0) >= 0;
                 return (
                   <tr key={h.id} className="hover:bg-slate-800/40 transition-colors">
@@ -502,7 +526,9 @@ export const InvestmentsView: React.FC = () => {
                       {h.exchangeRateToCHF.toFixed(4)}
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-100">
-                      {formatCurrency(h.currentValueCHF, baseCurrency)}
+                      {fxService.hasRateToCHF(h.currency) || h.currency === baseCurrency
+                        ? formatCurrency(h.currentValueCHF, baseCurrency)
+                        : 'Conversão indisponível'}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       {h.unrealizedProfitLossPercent !== undefined ? (
@@ -526,7 +552,9 @@ export const InvestmentsView: React.FC = () => {
           <div className="flex items-center gap-4">
             <span>Total da seleção:</span>
             <span className="text-base font-bold text-slate-100">
-              {formatCurrency(displayedHoldings.reduce((sum, h) => sum + h.currentValueCHF, 0), baseCurrency)}
+              {hasCompleteFX
+                ? formatCurrency(displayedHoldings.reduce((sum, h) => sum + h.currentValueCHF, 0), baseCurrency)
+                : 'Conversão indisponível'}
             </span>
           </div>
         </div>

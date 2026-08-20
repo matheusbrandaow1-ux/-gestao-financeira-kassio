@@ -1,6 +1,16 @@
 import { InvestmentPortfolio, InvestmentHolding } from '../types';
 import { fxService } from './fxService';
 
+export function isInvestmentAsset(asset: { classification?: string; category?: string }): boolean {
+  return asset.classification === 'ATIVO' && (
+    asset.category === 'INVESTIMENTO_LIQUIDO' || asset.category === 'PREVIDENCIA_3A'
+  );
+}
+
+export function getOriginalInvestmentValue(asset: { originalValue?: number; value: number }): number {
+  return asset.originalValue ?? asset.value;
+}
+
 export function getDefaultPortfolios(clientId: string = 'kassio-pf'): InvestmentPortfolio[] {
   const brlRate = fxService.getRateToCHF('BRL');
   const eurRate = fxService.getRateToCHF('EUR');

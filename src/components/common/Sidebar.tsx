@@ -17,13 +17,15 @@ import {
   ShieldCheck,
   UserCheck,
   Sparkles,
-  Coins
+  Coins,
+  ClipboardCheck
 } from 'lucide-react';
 import { useClient } from '../../context/ClientContext';
 import { useAuth } from '../../context/AuthContext';
 
 export type TabType = 
   | 'dashboard' 
+  | 'concept'
   | 'transactions' 
   | 'planning' 
   | 'investments'
@@ -52,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile = false,
   onCloseMobile
 }) => {
-  const { pendingItems } = useClient();
+    const { activeClient, pendingItems } = useClient();
   const { role } = useAuth();
   const isConsultant = role === 'CONSULTANT' || role === 'ADMIN';
 
@@ -67,6 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     section?: 'planning' | 'patrimony' | 'admin';
   }> = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'planning' },
+      ...(activeClient.id === 'kassio-pf' ? [{ id: 'concept' as TabType, label: 'Montagem do Conceito', icon: ClipboardCheck, section: 'planning' as const }] : []),
     { id: 'ai-assistant', label: 'Assistente IA', icon: Sparkles, section: 'planning' },
     { id: 'transactions', label: 'Transações', icon: ArrowLeftRight, section: 'planning' },
     { id: 'planning', label: 'Planejamento', icon: CalendarRange, section: 'planning' },

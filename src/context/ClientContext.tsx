@@ -59,6 +59,8 @@ const INITIAL_EMPTY_PLAN: MonthlyPlan = {
   updatedAt: new Date().toISOString()
 };
 
+export type DataLoadState = 'loading' | 'loaded' | 'empty' | 'error';
+
 interface ClientContextType {
   activeClient: ClientProfile;
   clientsList: ClientProfile[];
@@ -70,12 +72,15 @@ interface ClientContextType {
   
   // Data entities
   accounts: CanonicalAccount[];
+  accountsLoadState: DataLoadState;
   transactions: CanonicalTransaction[];
+  transactionsLoadState: DataLoadState;
   categories: Category[];
   rules: CanonicalRule[];
   monthlyPlan: MonthlyPlan;
   goals: FinancialGoal[];
   assets: AssetOrLiability[];
+  assetsLoadState: DataLoadState;
   netWorthHistory: NetWorthHistoryPoint[];
   recurringItems: RecurringItem[];
   pendingItems: PendingItem[];
@@ -140,12 +145,15 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Clean real entities state (no mock demo data)
   const [accounts, setAccounts] = useState<CanonicalAccount[]>([]);
+  const [accountsLoadState, setAccountsLoadState] = useState<DataLoadState>('loading');
   const [transactions, setTransactions] = useState<CanonicalTransaction[]>([]);
+  const [transactionsLoadState, setTransactionsLoadState] = useState<DataLoadState>('loading');
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
   const [rules, setRules] = useState<CanonicalRule[]>([]);
   const [monthlyPlan, setMonthlyPlan] = useState<MonthlyPlan>(INITIAL_EMPTY_PLAN);
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [assets, setAssets] = useState<AssetOrLiability[]>([]);
+  const [assetsLoadState, setAssetsLoadState] = useState<DataLoadState>('loading');
   const [netWorthHistory, setNetWorthHistory] = useState<NetWorthHistoryPoint[]>([]);
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([]);
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
@@ -171,6 +179,9 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       setIsLoading(true);
+      setAccountsLoadState('loading');
+      setTransactionsLoadState('loading');
+      setAssetsLoadState('loading');
       try {
         const targetId = isClientRole ? (authClientId || 'kassio-pf') : (activeClient.id || 'kassio-pf');
 
@@ -216,11 +227,13 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const accs: CanonicalAccount[] = [];
             accSnap.forEach(d => accs.push({ ...d.data() as CanonicalAccount, id: d.id }));
             setAccounts(accs);
+            setAccountsLoadState('loaded');
           } else if (isMounted) {
             setAccounts([]);
+            setAccountsLoadState('empty');
           }
         } catch {
-          if (isMounted) setAccounts([]);
+          if (isMounted) setAccountsLoadState('error');
         }
 
         // 3. Load Transactions
@@ -235,11 +248,13 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               }
             });
             setTransactions(txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            setTransactionsLoadState('loaded');
           } else if (isMounted) {
             setTransactions([]);
+            setTransactionsLoadState('empty');
           }
         } catch {
-          if (isMounted) setTransactions([]);
+          if (isMounted) setTransactionsLoadState('error');
         }
 
         // 4. Load Categories
@@ -302,11 +317,13 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const asts: AssetOrLiability[] = [];
             assetSnap.forEach(d => asts.push({ ...d.data() as AssetOrLiability, id: d.id }));
             setAssets(asts);
+            setAssetsLoadState('loaded');
           } else if (isMounted) {
             setAssets([]);
+            setAssetsLoadState('empty');
           }
         } catch {
-          if (isMounted) setAssets([]);
+          if (isMounted) setAssetsLoadState('error');
         }
 
         // 9. Recurring Items
@@ -1094,12 +1111,15 @@ export const ClientProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       selectedMonth,
       setSelectedMonth,
       accounts,
+      accountsLoadState,
       transactions,
+      transactionsLoadState,
       categories,
       rules,
       monthlyPlan,
       goals,
       assets,
+      assetsLoadState,
       netWorthHistory,
       recurringItems,
       pendingItems,

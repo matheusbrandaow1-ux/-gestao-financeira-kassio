@@ -18,6 +18,7 @@ import { ReportsView } from './views/ReportsView';
 import { AIAssistantView } from './views/AIAssistantView';
 import { IntegrationsView } from './views/IntegrationsView';
 import { SettingsView } from './views/SettingsView';
+import { ConceptAssemblyView } from './views/ConceptAssemblyView';
 import { LoginView } from './views/LoginView';
 import { Menu, RefreshCw, ShieldAlert } from 'lucide-react';
 import { getCapabilities } from './lib/capabilities';
@@ -70,6 +71,8 @@ const AppContent: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardView onNavigate={handleNavigate} />;
+      case 'concept':
+        return <ConceptAssemblyView />;
       case 'ai-assistant':
         return <AIAssistantView />;
       case 'transactions':
