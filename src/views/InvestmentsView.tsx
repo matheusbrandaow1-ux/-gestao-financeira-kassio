@@ -86,12 +86,8 @@ export const InvestmentsView: React.FC = () => {
       }
     });
 
-    return portfoliosByInstitution.size > 0
-      ? Array.from(portfoliosByInstitution.values())
-      : activeClient.isDemo
-        ? getDefaultPortfolios(activeClient.id)
-        : [];
-  }, [activeClient.id, activeClient.isDemo, assets]);
+    return Array.from(portfoliosByInstitution.values());
+  }, [assets]);
   const [selectedCurrencyFilter, setSelectedCurrencyFilter] = useState<'ALL' | CurrencyCode>('ALL');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingHolding, setEditingHolding] = useState<InvestmentHolding | null>(null);
