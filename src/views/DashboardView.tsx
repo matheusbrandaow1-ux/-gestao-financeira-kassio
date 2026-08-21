@@ -202,19 +202,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const realizedIncome = useMemo(() => {
     return currentMonthTransactions
       .filter(t => t.transactionType === 'RECEITA')
-      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [currentMonthTransactions]);
 
   const realizedExpenses = useMemo(() => {
     return currentMonthTransactions
       .filter(t => t.transactionType === 'DESPESA')
-      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [currentMonthTransactions]);
 
   const realizedInvestments = useMemo(() => {
     return currentMonthTransactions
       .filter(t => t.transactionType === 'INVESTIMENTO')
-      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [currentMonthTransactions]);
 
   const monthNetResult = realizedIncome - realizedExpenses;
@@ -224,13 +224,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const prevIncome = useMemo(() => {
     return previousMonthTransactions
       .filter(t => t.transactionType === 'RECEITA')
-      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [previousMonthTransactions]);
 
   const prevExpenses = useMemo(() => {
     return previousMonthTransactions
       .filter(t => t.transactionType === 'DESPESA')
-      .reduce((sum, t) => sum + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
+      .reduce((sum, t) => sum + getTransactionBaseAmount(t), 0);
   }, [previousMonthTransactions]);
 
   // Month-over-Month calculations
@@ -248,9 +248,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     // Calculate historical points
     return chronologicalMonths.map((ym) => {
       const txsInMonth = getTransactionsForMonth(transactions, ym);
-      const inc = txsInMonth.filter(t => t.transactionType === 'RECEITA').reduce((s, t) => s + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
-      const exp = txsInMonth.filter(t => t.transactionType === 'DESPESA').reduce((s, t) => s + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
-      const inv = txsInMonth.filter(t => t.transactionType === 'INVESTIMENTO').reduce((s, t) => s + (t.amountBase ?? t.convertedAmount ?? convertToCHF(t.amount, t.currency)), 0);
+      const inc = txsInMonth.filter(t => t.transactionType === 'RECEITA').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
+      const exp = txsInMonth.filter(t => t.transactionType === 'DESPESA').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
+      const inv = txsInMonth.filter(t => t.transactionType === 'INVESTIMENTO').reduce((s, t) => s + getTransactionBaseAmount(t), 0);
       const net = inc - exp;
 
       return {
