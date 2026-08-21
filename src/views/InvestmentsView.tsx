@@ -52,7 +52,10 @@ export const InvestmentsView: React.FC = () => {
       const originalValue = getOriginalInvestmentValue(asset);
       const storedBaseValue = asset.baseValue;
       const rate = asset.currency === 'CHF' ? 1 : fxService.getRateToCHF(asset.currency);
-      const currentValueCHF = storedBaseValue ?? (rate > 0 ? Math.round(originalValue * rate * 100) / 100 : 0);
+      const hasStoredBaseValue = storedBaseValue !== undefined && (storedBaseValue !== 0 || originalValue === 0);
+      const currentValueCHF = hasStoredBaseValue
+        ? storedBaseValue
+        : (rate > 0 ? Math.round(originalValue * rate * 100) / 100 : 0);
       const holding: InvestmentHolding = {
         id: asset.id,
         name: asset.name,
@@ -102,7 +105,7 @@ export const InvestmentsView: React.FC = () => {
       const rate = fxService.getRateToCHF(p.currency);
       const holdingsWithCHF = p.holdings.map(h => {
         const hRate = fxService.getRateToCHF(h.currency);
-        const chfVal = Math.round(h.currentValueOriginal * hRate * 100) / 100;
+        const chfVal = hRate > 0 ? Math.round(h.currentValueOriginal * hRate * 100) / 100 : 0;
         return {
           ...h,
           exchangeRateToCHF: hRate,

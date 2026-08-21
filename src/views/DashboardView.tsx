@@ -90,7 +90,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     const assetsVal = assets
       .filter(a => a.classification === 'ATIVO')
       .reduce((sum, a) => {
-        if (a.baseValue !== undefined) return sum + a.baseValue;
+        if (a.baseValue !== undefined && (a.baseValue !== 0 || a.value === 0)) return sum + a.baseValue;
         if (a.currency === currency) return sum + a.value;
         if (!hasRateToCHF(a.currency)) {
           conversionAvailable = false;
@@ -101,7 +101,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     const accountsVal = accounts.reduce((sum, account) => {
       const originalBalance = account.originalBalance ?? account.balance;
       const accountCurrency = account.originalCurrency || account.currency;
-      if (account.balanceBase !== undefined) return sum + Math.max(0, account.balanceBase);
+      if (account.balanceBase !== undefined && (account.balanceBase !== 0 || originalBalance === 0)) return sum + Math.max(0, account.balanceBase);
       if (accountCurrency === currency) return sum + Math.max(0, originalBalance);
       if (!hasRateToCHF(accountCurrency)) {
         conversionAvailable = false;
@@ -117,7 +117,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     const passivosVal = assets
       .filter(a => a.classification === 'PASSIVO')
       .reduce((sum, a) => {
-        if (a.baseValue !== undefined) return sum + a.baseValue;
+        if (a.baseValue !== undefined && (a.baseValue !== 0 || a.value === 0)) return sum + a.baseValue;
         if (a.currency === currency) return sum + a.value;
         if (!hasRateToCHF(a.currency)) {
           conversionAvailable = false;
@@ -130,7 +130,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       .reduce((sum, account) => {
         const originalBalance = account.originalBalance ?? account.balance;
         const accountCurrency = account.originalCurrency || account.currency;
-        if (account.balanceBase !== undefined) return sum + Math.abs(account.balanceBase);
+        if (account.balanceBase !== undefined && (account.balanceBase !== 0 || originalBalance === 0)) return sum + Math.abs(account.balanceBase);
         if (accountCurrency === currency) return sum + Math.abs(originalBalance);
         if (!hasRateToCHF(accountCurrency)) {
           conversionAvailable = false;
@@ -163,7 +163,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       .reduce((sum, account) => {
         const originalBalance = account.originalBalance ?? account.balance;
         const accountCurrency = account.originalCurrency || account.currency;
-        if (account.balanceBase !== undefined) return sum + Math.max(0, account.balanceBase);
+        if (account.balanceBase !== undefined && (account.balanceBase !== 0 || originalBalance === 0)) return sum + Math.max(0, account.balanceBase);
         if (accountCurrency === currency) return sum + Math.max(0, originalBalance);
         if (!hasRateToCHF(accountCurrency)) {
           conversionAvailable = false;

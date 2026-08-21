@@ -11,6 +11,13 @@ export function getOriginalInvestmentValue(asset: { originalValue?: number; valu
   return asset.originalValue ?? asset.value;
 }
 
+function getInvestmentBaseValue(asset: AssetOrLiability): number | undefined {
+  const originalValue = getOriginalInvestmentValue(asset);
+  if (asset.baseValue !== undefined && (asset.baseValue !== 0 || originalValue === 0)) return asset.baseValue;
+  const rate = asset.currency === 'CHF' ? 1 : fxService.getRateToCHF(asset.currency);
+  return rate > 0 ? Math.round(originalValue * rate * 100) / 100 : undefined;
+}
+
 export interface InvestmentSummaryGroup {
   currency: CurrencyCode;
   label: string;
@@ -34,15 +41,17 @@ export function getInvestmentSummary(assets: AssetOrLiability[]): InvestmentSumm
 
   return (['BRL', 'EUR', 'CHF'] as CurrencyCode[]).map(currency => {
     const groupAssets = assets.filter(asset => isInvestmentAsset(asset) && asset.currency === currency);
-    const rate = currency === 'CHF' ? 1 : fxService.getRateToCHF(currency);
     const originalTotal = groupAssets.reduce((sum, asset) => sum + getOriginalInvestmentValue(asset), 0);
+    const convertedValues = groupAssets.map(getInvestmentBaseValue);
 
     return {
       currency,
       label: labels[currency],
       originalTotal,
-      convertedTotal: rate > 0 ? Math.round(originalTotal * rate * 100) / 100 : 0,
-      conversionAvailable: groupAssets.length === 0 || rate > 0,
+      convertedTotal: convertedValues.every(value => value !== undefined)
+        ? convertedValues.reduce((sum, value) => sum + value!, 0)
+        : 0,
+      conversionAvailable: groupAssets.length === 0 || convertedValues.every(value => value !== undefined),
       positions: groupAssets.length,
       institutions: Array.from(new Set(groupAssets.map(asset => asset.institution || 'Custódia não informada'))),
       assets: groupAssets
