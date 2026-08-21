@@ -82,12 +82,13 @@ export const PlanningView: React.FC = () => {
   const categoryRealizedMap = useMemo(() => {
     const map: Record<string, number> = {};
     monthTransactions.forEach(t => {
-      if (t.categoryId) {
+      const category = categories.find(item => item.id === t.categoryId);
+      if (t.categoryId && category && category.type === t.transactionType) {
         map[t.categoryId] = (map[t.categoryId] || 0) + getTransactionBaseAmount(t);
       }
     });
     return map;
-  }, [monthTransactions]);
+  }, [categories, monthTransactions]);
 
   const handleDuplicateMonth = async () => {
     const nextMonth = getNextMonth(selectedMonth);
@@ -314,7 +315,7 @@ export const PlanningView: React.FC = () => {
                   : (monthlyPlan.categoryPlans[cat.id]?.plannedAmount ?? cat.budgetPlanned ?? 0);
                 const realized = categoryRealizedMap[cat.id] || 0;
                 const diff = cat.type === 'RECEITA' ? realized - planned : planned - realized;
-                const pct = planned > 0 ? (realized / planned) * 100 : 0;
+                const pct = planned > 0 ? (realized / planned) * 100 : null;
 
                 return (
                   <tr key={cat.id} className="hover:bg-slate-800/40">
@@ -368,13 +369,19 @@ export const PlanningView: React.FC = () => {
                     </td>
                     <td className="py-3 px-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${pct > 100 && cat.type === 'DESPESA' ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                            style={{ width: `${Math.min(100, pct)}%` }}
-                          />
-                        </div>
-                        <span className="text-[11px] font-mono text-slate-400 w-10 text-right">{Math.round(pct)}%</span>
+                        {pct === null ? (
+                          <span className="text-[11px] text-slate-500 w-full text-right">Sem meta</span>
+                        ) : (
+                          <>
+                            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${pct > 100 && cat.type === 'DESPESA' ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                style={{ width: `${Math.min(100, pct)}%` }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-mono text-slate-400 w-10 text-right">{Math.round(pct)}%</span>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

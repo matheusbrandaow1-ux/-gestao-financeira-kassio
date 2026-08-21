@@ -177,6 +177,19 @@ body textarea {
 	border-color: var(--wealth-line);
 }
 
+.category-control {
+	max-width: 12rem;
+	min-height: 30px;
+	background-color: var(--wealth-surface-raised);
+	color: var(--wealth-secondary);
+	font-size: 0.75rem;
+}
+
+.category-control:focus {
+	border-color: var(--wealth-jade-bright);
+	box-shadow: 0 0 0 1px var(--wealth-jade);
+}
+
 body input:focus,
 body select:focus,
 body textarea:focus {

@@ -292,7 +292,7 @@ export function mapLunchMoneyTransaction(
     .join(' ')
     .toLocaleLowerCase('pt-BR');
   let transactionType: TransactionType = isNegative ? 'RECEITA' : 'DESPESA';
-  if (/pagamento recebido|pagamento de fatura|fatura|cr[eé]dit|bcn mobile banking|bcn-netbanking|versement|ordre permanent|transfer/.test(searchableText)) {
+  if (!tx.is_income && /pagamento recebido|pagamento de fatura|fatura|cr[eé]dit|bcn mobile banking|bcn-netbanking|versement|ordre permanent|transfer/.test(searchableText)) {
     transactionType = 'TRANSFERÊNCIA';
   } else if (/iof de volta|estorno|reembolso|refund/.test(searchableText)) {
     transactionType = 'ESTORNO';

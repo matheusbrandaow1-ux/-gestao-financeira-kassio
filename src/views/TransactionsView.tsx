@@ -464,14 +464,14 @@ export const TransactionsView: React.FC = () => {
                           value={tx.categoryId || ''}
                           onChange={(e) => handleCategoryChange(tx, e.target.value)}
                           className={`
-                            px-2 py-1 rounded text-xs border focus:outline-none transition-all
+                            category-control px-2 py-1 rounded text-xs border focus:outline-none transition-all
                             ${tx.categoryId 
                               ? 'bg-slate-800 text-slate-200 border-slate-700' 
                               : 'bg-amber-950/60 text-amber-300 border-amber-500/40 font-semibold'
                             }
                           `}
                         >
-                          <option value="">⚠️ Sem Categoria</option>
+                              <option value="">Sem categoria</option>
                           {Object.entries(
                             categories
                               .filter(c => !c.isGroup)
