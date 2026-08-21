@@ -37,7 +37,7 @@ import { getCapabilities } from '../lib/capabilities';
 import { formatCurrency, formatPercent, calculateProgressPercent } from '../lib/money';
 import { convertToCHF, hasRateToCHF } from '../lib/fxService';
 import { getTransactionBaseAmount } from '../lib/financialMetrics';
-import { getOriginalInvestmentValue, isInvestmentAsset } from '../lib/investmentData';
+import { getInvestmentSummary } from '../lib/investmentData';
 import { TabType } from '../components/common/Sidebar';
 import { MonthSelector } from '../components/common/MonthSelector';
 import { 
@@ -305,19 +305,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   const pendingUnresolved = pendingItems.filter(p => !p.isResolved);
   const uncategorizedCount = currentMonthTransactions.filter(t => !t.categoryId || t.categoryId === 'cat-none').length;
-  const investmentAssets = assets.filter(isInvestmentAsset);
-  const investmentGroups = [
-    { currency: 'BRL' as const, label: 'Grupo Brasil' },
-    { currency: 'EUR' as const, label: 'Grupo Europa' },
-    { currency: 'CHF' as const, label: 'Grupo Suíça' }
-  ].map(group => {
-    const holdings = investmentAssets.filter(asset => asset.currency === group.currency);
-    const originalTotal = holdings.reduce((sum, asset) => sum + getOriginalInvestmentValue(asset), 0);
-    const convertedHoldings = holdings.filter(asset => asset.baseValue !== undefined || group.currency === currency || hasRateToCHF(group.currency));
-    const convertedTotal = convertedHoldings.reduce((sum, asset) => sum + (asset.baseValue ?? convertToCHF(getOriginalInvestmentValue(asset), asset.currency)), 0);
-    const institutions = Array.from(new Set(holdings.map(asset => asset.institution || 'Custódia não informada')));
-    return { ...group, holdings, originalTotal, convertedTotal, institutions, conversionAvailable: holdings.length === convertedHoldings.length };
-  });
+  const investmentGroups = useMemo(() => getInvestmentSummary(assets), [assets]);
 
   return (
     <div className="dashboard-shell space-y-8 pb-12">
@@ -520,7 +508,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500 mt-1">{group.currency}</p>
                 </div>
                 <p className="text-sm font-mono text-slate-100">
-                  {group.holdings.length > 0
+                  {group.positions > 0
                     ? formatCurrency(group.originalTotal, group.currency)
                     : assetsLoadState === 'error'
                       ? 'Não foi possível carregar os dados'
@@ -534,9 +522,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   ? 'Não foi possível carregar os dados'
                   : group.institutions.length > 0 ? group.institutions.join(' · ') : 'Nenhuma posição registrada'}
               </p>
-              {group.holdings.length > 0 && (
+              {group.positions > 0 && (
                 <div className="mt-3 space-y-1.5">
-                  {group.holdings.slice(0, 3).map(holding => (
+                  {group.assets.slice(0, 3).map(holding => (
                     <div key={holding.id} className="flex items-center justify-between gap-3 text-xs">
                       <span className="text-slate-400 truncate">{holding.name}</span>
                       <span className="font-mono text-slate-300 shrink-0">{formatCurrency(holding.originalValue ?? holding.value, group.currency)}</span>

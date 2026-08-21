@@ -2,18 +2,18 @@
 
 :root {
 	color-scheme: dark;
-	--wealth-bg: #0c1112;
-	--wealth-surface: #12191a;
-	--wealth-surface-raised: #182122;
-	--wealth-line: rgba(157, 174, 172, 0.14);
-	--wealth-jade: #2f7d68;
-	--wealth-jade-bright: #65b59a;
-	--wealth-positive: #79c69a;
-	--wealth-negative: #e1847e;
-	--wealth-warning: #d4ad68;
-	--wealth-text: #f0f3ef;
-	--wealth-secondary: #a7b2b0;
-	--wealth-muted: #71807e;
+	--wealth-bg: #0b0d0c;
+	--wealth-surface: #111613;
+	--wealth-surface-raised: #1b2420;
+	--wealth-line: rgba(167, 177, 169, 0.16);
+	--wealth-jade: #244a38;
+	--wealth-jade-bright: #5fae84;
+	--wealth-positive: #8eb49d;
+	--wealth-negative: #d86565;
+	--wealth-warning: #c3a56d;
+	--wealth-text: #f0eee8;
+	--wealth-secondary: #a7aaa5;
+	--wealth-muted: #727873;
 }
 
 html {
@@ -110,6 +110,28 @@ body .bg-blue-500\/15 {
 	background-color: var(--wealth-jade);
 }
 
+body .bg-indigo-500,
+body .bg-indigo-600,
+body .bg-violet-600,
+body .bg-purple-600 {
+	background-color: var(--wealth-jade);
+}
+
+body .bg-indigo-500\/10,
+body .bg-violet-500\/10,
+body .bg-purple-500\/10 {
+	background-color: rgba(95, 174, 132, 0.1);
+}
+
+body .text-indigo-300,
+body .text-indigo-400,
+body .text-violet-300,
+body .text-violet-400,
+body .text-purple-300,
+body .text-purple-400 {
+	color: var(--wealth-positive);
+}
+
 body .border-blue-500\/20,
 body .border-blue-500\/30,
 body .border-blue-500\/40 {
@@ -192,6 +214,26 @@ body textarea:focus {
 
 .wealth-table tbody tr {
 	min-height: 56px;
+}
+
+.wealth-view,
+.dashboard-shell {
+	animation: wealth-reveal 420ms ease-out both;
+}
+
+.wealth-metric,
+.dashboard-metric,
+.wealth-finance-summary {
+	background: linear-gradient(110deg, rgba(27, 36, 32, 0.52), rgba(17, 22, 19, 0.18));
+	border-radius: 0.75rem;
+	padding-top: 0.9rem;
+	padding-bottom: 0.9rem;
+	padding-right: 0.9rem;
+}
+
+@keyframes wealth-reveal {
+	from { opacity: 0; transform: translateY(6px); }
+	to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 767px) {

@@ -5,8 +5,7 @@ import { formatCurrency } from '../lib/money';
 import { convertToCHF, hasRateToCHF } from '../lib/fxService';
 import { getTransactionBaseAmount } from '../lib/financialMetrics';
 import { getOriginalInvestmentValue, isInvestmentAsset } from '../lib/investmentData';
-
-const SNAPSHOT_DATE = '20/08/2026';
+import { formatMonthLabel, getTransactionsForMonth } from '../lib/monthUtils';
 
 const analyticalGroups = [
   { key: 'essenciais', label: 'Fixos essenciais', terms: ['moradia', 'aluguel', 'energia', 'água', 'luz', 'saúde', 'telecom'] },
@@ -20,9 +19,9 @@ function groupForCategory(name: string): string {
 }
 
 export const ConceptAssemblyView: React.FC = () => {
-  const { activeClient, accounts, assets, categories, goals, transactions, monthlyPlan, recurringItems } = useClient();
+  const { activeClient, accounts, assets, categories, goals, transactions, monthlyPlan, recurringItems, selectedMonth } = useClient();
   const currency = activeClient.baseCurrency;
-  const monthTransactions = transactions.filter(transaction => transaction.date.startsWith('2026-08'));
+  const monthTransactions = getTransactionsForMonth(transactions, selectedMonth);
 
   const investmentAssets = useMemo(() => assets.filter(isInvestmentAsset), [assets]);
   const currencyTotals = useMemo(() => {
@@ -87,7 +86,7 @@ export const ConceptAssemblyView: React.FC = () => {
             <h1 className="text-3xl font-semibold tracking-tight text-slate-100">Montagem do Conceito — {activeClient.name}</h1>
             <p className="mt-1 text-sm text-slate-400">Leitura patrimonial e orçamentária em moeda base {currency}, sem alterar as fontes originais.</p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-400"><CalendarDays className="h-4 w-4" /> {SNAPSHOT_DATE}</div>
+          <div className="flex items-center gap-2 text-xs text-slate-400"><CalendarDays className="h-4 w-4" /> {formatMonthLabel(selectedMonth, 'full')}</div>
         </div>
       </header>
 

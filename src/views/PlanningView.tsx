@@ -124,10 +124,10 @@ export const PlanningView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="wealth-view space-y-6 pb-12">
       
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-7">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
             <span>Planejamento Mensal Orçamentário</span>
@@ -164,7 +164,7 @@ export const PlanningView: React.FC = () => {
                 setTempPlan(monthlyPlan);
                 setIsEditingTargets(true);
               }}
-              className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span>Ajustar Metas</span>
             </button>

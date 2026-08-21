@@ -19,12 +19,16 @@ import {
 import { useClient } from '../context/ClientContext';
 import { useAuth } from '../context/AuthContext';
 import { Category } from '../types';
-import { formatCurrency } from '../lib/money';
+import { formatCurrency, formatPercent } from '../lib/money';
+import { getTransactionBaseAmount } from '../lib/financialMetrics';
+import { getTransactionsForMonth, formatMonthLabel } from '../lib/monthUtils';
 
 export const CategoriesView: React.FC = () => {
   const { 
     activeClient, 
-    categories, 
+    categories,
+    transactions,
+    selectedMonth,
     triggerLunchMoneySync, 
     isSyncing, 
     syncStatus, 
@@ -39,6 +43,24 @@ export const CategoriesView: React.FC = () => {
   const [syncFeedback, setSyncFeedback] = useState<{ message: string; success: boolean } | null>(null);
 
   const currency = activeClient?.baseCurrency || 'CHF';
+
+  const categoryCoverage = useMemo(() => {
+    const expenses = getTransactionsForMonth(transactions, selectedMonth)
+      .filter(transaction => transaction.transactionType === 'DESPESA');
+    const uncategorized = expenses.filter(transaction => !transaction.categoryId || transaction.categoryId === 'cat-none');
+    const categorizedValue = expenses
+      .filter(transaction => transaction.categoryId && transaction.categoryId !== 'cat-none')
+      .reduce((sum, transaction) => sum + Math.abs(getTransactionBaseAmount(transaction)), 0);
+    const uncategorizedValue = uncategorized.reduce((sum, transaction) => sum + Math.abs(getTransactionBaseAmount(transaction)), 0);
+    const totalValue = categorizedValue + uncategorizedValue;
+
+    return {
+      categorizedValue,
+      uncategorizedValue,
+      uncategorizedCount: uncategorized.length,
+      coverage: totalValue > 0 ? categorizedValue / totalValue : 0
+    };
+  }, [transactions, selectedMonth]);
 
   // Toggle group accordion
   const toggleGroup = (groupId: string) => {
@@ -160,13 +182,13 @@ export const CategoriesView: React.FC = () => {
             <FolderTree className="w-3.5 h-3.5" />
             <span>Estrutura de Categorias & Orçamento</span>
             <span>•</span>
-            <span className="text-slate-400">{activeClient?.name || 'Cliente'}</span>
+            <span className="text-slate-400">{formatMonthLabel(selectedMonth, 'short')}</span>
           </div>
           <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
-            Categorias
+            Mapa de Despesas & Comportamento Financeiro
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            Hierarquia de grupos, categorias sincronizadas do Lunch Money e acompanhamento orçamentário
+            Categorias reais, cobertura de classificação e revisão necessária
           </p>
         </div>
 
@@ -204,37 +226,37 @@ export const CategoriesView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="wealth-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-medium">Grupos de Categoria</span>
+            <span className="text-xs font-medium">Total categorizado</span>
             <Layers className="w-4 h-4 text-blue-400" />
           </div>
-          <div className="text-2xl font-bold font-mono text-slate-100">{stats.totalGroups}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Macro-divisões orçamentárias</div>
+          <div className="text-2xl font-bold font-mono text-slate-100">{formatCurrency(categoryCoverage.categorizedValue, currency)}</div>
+          <div className="text-[11px] text-slate-500 mt-1">Despesas no período selecionado</div>
         </div>
 
         <div className="wealth-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-medium">Categorias Atribuíveis</span>
+            <span className="text-xs font-medium">Revisão necessária</span>
             <Tag className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl font-bold font-mono text-slate-100">{stats.totalAssignable}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Disponíveis para classificar transações</div>
+          <div className="text-2xl font-bold font-mono text-amber-300">{categoryCoverage.uncategorizedCount}</div>
+          <div className="text-[11px] text-slate-500 mt-1">{formatCurrency(categoryCoverage.uncategorizedValue, currency)} sem categoria</div>
         </div>
 
         <div className="wealth-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-medium">Fonte dos Dados</span>
+            <span className="text-xs font-medium">Categorias ativas</span>
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-sm font-bold text-slate-200 mt-1">Lunch Money API v2</div>
-          <div className="text-[11px] text-slate-500 mt-1">Sincronização fiel e idempotente</div>
+          <div className="text-2xl font-bold font-mono text-slate-100 mt-1">{stats.totalAssignable}</div>
+          <div className="text-[11px] text-slate-500 mt-1">Registros preservados no catálogo</div>
         </div>
 
         <div className="wealth-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-medium">Status de Conexão</span>
-            <span className={`w-2.5 h-2.5 rounded-full ${syncStatus === 'SINCRONIZADO' ? 'bg-emerald-400' : 'bg-blue-400'}`} />
+            <span className="text-xs font-medium">Cobertura</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
           </div>
-          <div className="text-sm font-semibold text-slate-200 mt-1">{syncStatus || 'CONECTADO'}</div>
+          <div className="text-2xl font-bold font-mono text-emerald-300 mt-1">{formatPercent(categoryCoverage.coverage)}</div>
           <div className="text-[11px] text-slate-500 mt-1">
             {lastSyncedAt ? `Última: ${new Date(lastSyncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Sincronizado'}
           </div>

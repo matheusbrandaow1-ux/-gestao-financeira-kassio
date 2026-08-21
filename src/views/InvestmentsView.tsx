@@ -34,13 +34,14 @@ import { useClient } from '../context/ClientContext';
 import { AssetOrLiability, InvestmentPortfolio, InvestmentHolding, CurrencyCode } from '../types';
 import { formatCurrency, formatPercent } from '../lib/money';
 import { fxService } from '../lib/fxService';
-import { getDefaultPortfolios, getOriginalInvestmentValue, isInvestmentAsset } from '../lib/investmentData';
+import { getDefaultPortfolios, getOriginalInvestmentValue, getInvestmentSummary, isInvestmentAsset } from '../lib/investmentData';
 
 const ALLOCATION_COLORS = ['#34D399', '#F59E0B', '#FB7185', '#A3E635', '#F97316', '#94A3B8'];
 
 export const InvestmentsView: React.FC = () => {
   const { activeClient, assets, assetsLoadState } = useClient();
   const baseCurrency = activeClient.baseCurrency || 'CHF';
+  const investmentSummaryGroups = useMemo(() => getInvestmentSummary(assets), [assets]);
 
   const portfolios = useMemo(() => {
     const investmentAssets = assets.filter(isInvestmentAsset);
@@ -123,11 +124,11 @@ export const InvestmentsView: React.FC = () => {
 
   // Aggregate Metrics in CHF
   const totalInvestedCHF = useMemo(() => {
-    return enrichedPortfolios.reduce((sum, p) => sum + p.totalValueCHF, 0);
-  }, [enrichedPortfolios]);
+    return investmentSummaryGroups.reduce((sum, group) => sum + group.convertedTotal, 0);
+  }, [investmentSummaryGroups]);
 
-  const hasCompleteFX = enrichedPortfolios.length > 0 && enrichedPortfolios.every(portfolio =>
-    portfolio.holdings.every(holding => holding.currency === 'CHF' || fxService.hasRateToCHF(holding.currency))
+  const hasCompleteFX = investmentSummaryGroups.some(group => group.positions > 0) && investmentSummaryGroups.every(group =>
+    group.positions === 0 || group.conversionAvailable
   );
   const investmentSummary = assetsLoadState === 'error'
     ? 'Não foi possível carregar os dados'
@@ -140,9 +141,9 @@ export const InvestmentsView: React.FC = () => {
           : 'Conversão CHF indisponível';
 
   // Specific portfolio values
-  const brlPortfolio = enrichedPortfolios.find(p => p.currency === 'BRL');
-  const eurPortfolio = enrichedPortfolios.find(p => p.currency === 'EUR');
-  const chfPortfolio = enrichedPortfolios.find(p => p.currency === 'CHF');
+  const brlPortfolio = investmentSummaryGroups.find(group => group.currency === 'BRL');
+  const eurPortfolio = investmentSummaryGroups.find(group => group.currency === 'EUR');
+  const chfPortfolio = investmentSummaryGroups.find(group => group.currency === 'CHF');
 
   // Asset class breakdown
   const assetClassData = useMemo(() => {
@@ -164,13 +165,13 @@ export const InvestmentsView: React.FC = () => {
 
   // Currency breakdown
   const currencyBreakdownData = useMemo(() => {
-    return enrichedPortfolios.map(p => ({
-      name: p.currency,
-      value: p.totalValueCHF,
-      originalValue: p.totalValueOriginal,
-      percent: totalInvestedCHF > 0 ? (p.totalValueCHF / totalInvestedCHF) * 100 : 0
+    return investmentSummaryGroups.filter(group => group.positions > 0).map(group => ({
+      name: group.currency,
+      value: group.convertedTotal,
+      originalValue: group.originalTotal,
+      percent: totalInvestedCHF > 0 ? (group.convertedTotal / totalInvestedCHF) * 100 : 0
     }));
-  }, [enrichedPortfolios, totalInvestedCHF]);
+  }, [investmentSummaryGroups, totalInvestedCHF]);
 
   // Flattened filtered holdings
   const displayedHoldings = useMemo(() => {
@@ -262,10 +263,10 @@ export const InvestmentsView: React.FC = () => {
             <div className="text-2xl font-bold text-slate-100">
               {assetsLoadState === 'error'
                 ? 'Não foi possível carregar os dados'
-                : brlPortfolio ? `R$ ${brlPortfolio.totalValueOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Sem posição BRL'}
+                : brlPortfolio ? `R$ ${brlPortfolio.originalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Sem posição BRL'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-              <span>{fxService.hasRateToCHF('BRL') && brlPortfolio ? `Eq. ${formatCurrency(brlPortfolio.totalValueCHF, baseCurrency)}` : 'Conversão indisponível'}</span>
+              <span>{brlPortfolio?.conversionAvailable ? `Eq. ${formatCurrency(brlPortfolio.convertedTotal, baseCurrency)}` : 'Conversão indisponível'}</span>
               <span className="text-slate-500 font-medium">Rentabilidade na posição</span>
             </div>
           </div>
@@ -285,10 +286,10 @@ export const InvestmentsView: React.FC = () => {
             <div className="text-2xl font-bold text-slate-100">
               {assetsLoadState === 'error'
                 ? 'Não foi possível carregar os dados'
-                : eurPortfolio ? `€ ${eurPortfolio.totalValueOriginal.toLocaleString('de-CH', { minimumFractionDigits: 2 })}` : 'Sem posição EUR'}
+                : eurPortfolio ? `€ ${eurPortfolio.originalTotal.toLocaleString('de-CH', { minimumFractionDigits: 2 })}` : 'Sem posição EUR'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-              <span>{fxService.hasRateToCHF('EUR') && eurPortfolio ? `Eq. ${formatCurrency(eurPortfolio.totalValueCHF, baseCurrency)}` : 'Conversão indisponível'}</span>
+              <span>{eurPortfolio?.conversionAvailable ? `Eq. ${formatCurrency(eurPortfolio.convertedTotal, baseCurrency)}` : 'Conversão indisponível'}</span>
               <span className="text-emerald-400 font-semibold flex items-center">
                 <ArrowUpRight className="w-3 h-3" />
                 P/L na posição
@@ -311,7 +312,7 @@ export const InvestmentsView: React.FC = () => {
             <div className="text-2xl font-bold text-slate-100">
               {assetsLoadState === 'error'
                 ? 'Não foi possível carregar os dados'
-                : chfPortfolio ? formatCurrency(chfPortfolio.totalValueOriginal, 'CHF') : 'Sem posição CHF'}
+                : chfPortfolio ? formatCurrency(chfPortfolio.originalTotal, 'CHF') : 'Sem posição CHF'}
             </div>
             <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
               <span>VIAC / 3a Global</span>

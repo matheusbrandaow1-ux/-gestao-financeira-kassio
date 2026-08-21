@@ -157,10 +157,15 @@ export const ReportsView: React.FC = () => {
   return (
     <div className="wealth-view space-y-8 pb-12 print:bg-white print:text-black">
       {/* Header & Filter Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
+      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-7 print:hidden">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2.5">
-            <BarChart3 className="w-6 h-6 text-blue-400" />
+          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Análise Financeira</span>
+            <span>•</span>
+            <span>{formatMonthLabel(selectedMonth, 'full')}</span>
+          </div>
+          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Relatórios & Análise Financeira
           </h1>
           <p className="text-sm text-slate-400 mt-1">
@@ -174,7 +179,7 @@ export const ReportsView: React.FC = () => {
             <button
               onClick={() => setTimeRange('MONTH')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                timeRange === 'MONTH' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                timeRange === 'MONTH' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Mês Atual ({formatMonthLabel(selectedMonth, 'short')})
@@ -182,7 +187,7 @@ export const ReportsView: React.FC = () => {
             <button
               onClick={() => setTimeRange('QUARTER')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                timeRange === 'QUARTER' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                timeRange === 'QUARTER' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Trimestre
@@ -190,7 +195,7 @@ export const ReportsView: React.FC = () => {
             <button
               onClick={() => setTimeRange('YEAR')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                timeRange === 'YEAR' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                timeRange === 'YEAR' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Ano {selectedMonth.slice(0, 4)}
@@ -247,7 +252,7 @@ export const ReportsView: React.FC = () => {
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
           <span className="text-xs text-slate-400 font-medium">Taxa de Poupança</span>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-blue-400">
+              <span className="text-2xl font-bold text-emerald-300">
               {formatPercent(savingsRate)}
             </span>
             <span className="text-xs text-slate-500 font-mono">
@@ -272,7 +277,7 @@ export const ReportsView: React.FC = () => {
         <button
           onClick={() => setReportType('CASHFLOW')}
           className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-            reportType === 'CASHFLOW' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              reportType === 'CASHFLOW' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           Fluxo de Caixa Mensal
@@ -281,7 +286,7 @@ export const ReportsView: React.FC = () => {
         <button
           onClick={() => setReportType('CATEGORIES')}
           className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-            reportType === 'CATEGORIES' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              reportType === 'CATEGORIES' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           Distribuição de Despesas
@@ -290,7 +295,7 @@ export const ReportsView: React.FC = () => {
         <button
           onClick={() => setReportType('NETWORTH')}
           className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-            reportType === 'NETWORTH' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              reportType === 'NETWORTH' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           Evolução Patrimonial
@@ -299,7 +304,7 @@ export const ReportsView: React.FC = () => {
         <button
           onClick={() => setReportType('INCOME_STATEMENT')}
           className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-            reportType === 'INCOME_STATEMENT' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              reportType === 'INCOME_STATEMENT' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           DRE Pessoal Detalhada

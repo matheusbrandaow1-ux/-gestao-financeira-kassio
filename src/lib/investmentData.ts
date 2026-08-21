@@ -1,4 +1,4 @@
-import { InvestmentPortfolio, InvestmentHolding } from '../types';
+import { AssetOrLiability, CurrencyCode, InvestmentPortfolio, InvestmentHolding } from '../types';
 import { fxService } from './fxService';
 
 export function isInvestmentAsset(asset: { classification?: string; category?: string }): boolean {
@@ -9,6 +9,45 @@ export function isInvestmentAsset(asset: { classification?: string; category?: s
 
 export function getOriginalInvestmentValue(asset: { originalValue?: number; value: number }): number {
   return asset.originalValue ?? asset.value;
+}
+
+export interface InvestmentSummaryGroup {
+  currency: CurrencyCode;
+  label: string;
+  originalTotal: number;
+  convertedTotal: number;
+  conversionAvailable: boolean;
+  positions: number;
+  institutions: string[];
+  assets: AssetOrLiability[];
+}
+
+/** Single source of truth for currency totals shown across wealth views. */
+export function getInvestmentSummary(assets: AssetOrLiability[]): InvestmentSummaryGroup[] {
+  const labels: Record<CurrencyCode, string> = {
+    BRL: 'Grupo Brasil',
+    EUR: 'Grupo Europa',
+    CHF: 'Grupo Suíça',
+    USD: 'Grupo Dólar',
+    GBP: 'Grupo Libra'
+  };
+
+  return (['BRL', 'EUR', 'CHF'] as CurrencyCode[]).map(currency => {
+    const groupAssets = assets.filter(asset => isInvestmentAsset(asset) && asset.currency === currency);
+    const rate = currency === 'CHF' ? 1 : fxService.getRateToCHF(currency);
+    const originalTotal = groupAssets.reduce((sum, asset) => sum + getOriginalInvestmentValue(asset), 0);
+
+    return {
+      currency,
+      label: labels[currency],
+      originalTotal,
+      convertedTotal: rate > 0 ? Math.round(originalTotal * rate * 100) / 100 : 0,
+      conversionAvailable: groupAssets.length === 0 || rate > 0,
+      positions: groupAssets.length,
+      institutions: Array.from(new Set(groupAssets.map(asset => asset.institution || 'Custódia não informada'))),
+      assets: groupAssets
+    };
+  });
 }
 
 export function getDefaultPortfolios(clientId: string = 'kassio-pf'): InvestmentPortfolio[] {
