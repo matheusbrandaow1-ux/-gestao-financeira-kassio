@@ -156,3 +156,13 @@ export function formatMonthLabel(yearMonth: string, format: 'full' | 'short' | '
 
   return `${MONTH_NAMES_PT[monthIdx]} ${year}`;
 }
+
+/**
+ * Formata uma data-somente (YYYY-MM-DD) como DD/MM/YYYY sem passar por Date,
+ * evitando o deslocamento de fuso do parse UTC de datas sem horário.
+ */
+export function formatDateLabel(dateStr: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+  if (!match) return dateStr;
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}

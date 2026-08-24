@@ -29,6 +29,18 @@ import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../lib/money';
 import { PublicLunchMoneyIntegration } from '../types';
 
+const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  CHECKING: 'Conta Corrente',
+  SAVINGS: 'Poupança',
+  CREDIT_CARD: 'Cartão de Crédito',
+  INVESTMENT: 'Investimento',
+  PENSION_3A: 'Previdência 3a',
+  PENSION_2ND: 'Previdência 2º Pilar',
+  CASH: 'Caixa',
+  CRYPTO: 'Cripto',
+  OTHER: 'Outros',
+};
+
 export const IntegrationsView: React.FC = () => {
   const { 
     activeClient, 
@@ -332,7 +344,7 @@ export const IntegrationsView: React.FC = () => {
               id="sync-lunchmoney-now-btn"
               onClick={handleManualSync}
               disabled={isSyncing || isTestingActiveConnection}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md shadow-blue-900/30 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-medium text-xs shadow-md shadow-blue-900/30 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
@@ -405,7 +417,7 @@ export const IntegrationsView: React.FC = () => {
                 id="connect-lunchmoney-btn"
                 onClick={() => handleOpenModal('CONNECT')}
                 disabled={!isConsultantOrAdmin || isLoadingIntegration}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-lg shadow-emerald-950/40 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-semibold text-xs shadow-lg shadow-emerald-950/40 transition-all disabled:opacity-50"
               >
                 <Key className="w-4 h-4" />
                 <span>Conectar Lunch Money</span>
@@ -565,25 +577,42 @@ export const IntegrationsView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {accounts.map(acc => (
+                {accounts.map(acc => {
+                  const isLunchMoney = acc.provider === 'LUNCH_MONEY';
+                  const syncedLabel = acc.lastSyncedAt
+                    ? `Sync em ${new Date(acc.lastSyncedAt).toLocaleDateString('pt-BR')}`
+                    : 'Aguardando sync';
+                  return (
                   <tr key={acc.id} className="hover:bg-slate-800/40">
                     <td className="py-3 font-semibold text-slate-100 flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${acc.provider === 'LUNCH_MONEY' ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                      <span className={`w-2 h-2 rounded-full ${isLunchMoney ? 'bg-blue-500' : 'bg-slate-500'}`} />
                       {acc.name}
                     </td>
                     <td className="py-3 text-slate-300">{acc.institution}</td>
-                    <td className="py-3 text-slate-400 font-mono text-[11px]">{acc.type}</td>
+                    <td className="py-3 text-slate-400 text-[11px]">{ACCOUNT_TYPE_LABELS[acc.type] ?? acc.type}</td>
                     <td className="py-3 text-slate-300 font-mono font-bold">{acc.currency}</td>
                     <td className="py-3 text-right font-mono font-bold text-slate-100">
                       {formatCurrency(acc.balance, acc.currency)}
                     </td>
                     <td className="py-3 text-center">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        Sincronizada
-                      </span>
+                      {/* estado derivado do dado persistido; verde só com conexão ativa */}
+                      {!isLunchMoney ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                          Manual
+                        </span>
+                      ) : isConnected && acc.lastSyncedAt ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          {syncedLabel}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                          {acc.lastSyncedAt ? `${syncedLabel} · conexão inativa` : 'Conexão inativa'}
+                        </span>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -594,7 +623,7 @@ export const IntegrationsView: React.FC = () => {
       <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
         <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
           <Activity className="w-4 h-4 text-indigo-400" />
-          Histórico de Execuções e Auditoria de Sync (Sync Jobs)
+          Histórico de Sincronizações
         </h2>
 
         {syncJobs.length === 0 ? (
@@ -615,7 +644,13 @@ export const IntegrationsView: React.FC = () => {
                   }`} />
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-slate-200">{job.status} • Job #{job.id.slice(-6)}</p>
+                      <p className="font-semibold text-slate-200">
+                        {job.status === 'SUCCESS' || job.status === 'SINCRONIZADO'
+                          ? 'Concluída'
+                          : job.status === 'SINCRONIZANDO'
+                            ? 'Em andamento'
+                            : 'Falha'} • Execução #{job.id.slice(-6)}
+                      </p>
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-800 text-slate-400">
                         {job.provider || 'lunch_money'}
                       </span>
@@ -758,7 +793,7 @@ export const IntegrationsView: React.FC = () => {
                   id="modal-submit-connect-btn"
                   onClick={handleConnectToken}
                   disabled={isConnecting || isTestingToken || !tokenInput.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-950/50 transition-all disabled:opacity-40"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold shadow-md shadow-emerald-950/50 transition-all disabled:opacity-40"
                 >
                   {isConnecting ? (
                     <>

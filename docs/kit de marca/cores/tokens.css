@@ -1,0 +1,32 @@
+/* apurato · tokens de marca · v1.0 */
+/* Conceito: todo número tem origem. */
+:root{
+  /* superfícies (modo escuro é o modo nativo do produto) */
+  --ap-ardosia:#14111B;        /* fundo base do sistema */
+  --ap-ardosia-2:#1C1826;      /* cartões e superfícies */
+  --ap-ardosia-3:#262133;      /* superfícies elevadas, hover */
+  --ap-fio:#322C42;            /* linhas, bordas, divisores */
+
+  /* texto */
+  --ap-pergaminho:#F0EDE4;     /* texto principal sobre escuro */
+  --ap-lapis:#9A94A8;          /* legendas e apoios */
+  --ap-tinta:#201C29;          /* texto sobre fundos claros */
+
+  /* marca */
+  --ap-purpura:#9B7FDB;        /* Púrpura-Mil: origem, ação primária. Um destaque por tela. */
+  --ap-purpura-tinta:#5A4197;  /* Púrpura sobre fundos claros / impresso */
+
+  /* semânticas — só com significado financeiro real, nunca decoração */
+  --ap-conferido:#5CAD8C;      /* valores conciliados, variação positiva */
+  --ap-estorno:#C56A6A;        /* despesa, estorno, variação negativa */
+  --ap-pendente:#C9A45C;       /* pendência, aguardando classificação */
+
+  /* impresso e documentos (modo claro secundário) */
+  --ap-papel-razao:#EEF0E7;    /* verde-pálido do papel de livro-razão */
+  --ap-papel-razao-2:#E4E7DB;
+
+  /* tipografia */
+  --ap-serif:'Fraunces', serif;              /* títulos e números de destaque */
+  --ap-sans:'Schibsted Grotesk', sans-serif; /* texto e interface */
+  --ap-mono:'Spline Sans Mono', monospace;   /* valores, tabelas, marcadores */
+}

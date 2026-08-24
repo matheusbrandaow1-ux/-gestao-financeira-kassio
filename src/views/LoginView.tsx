@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  Briefcase, 
-  Lock, 
-  Mail, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
-  ShieldCheck, 
+import {
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
   AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { ApuratoSymbol } from '../components/common/Brand';
 
 export const LoginView: React.FC = () => {
   const { signInWithEmail } = useAuth();
@@ -40,22 +40,20 @@ export const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 sm:px-6 py-12 selection:bg-blue-600 selection:text-white">
-      {/* Background ambient gradient glow */}
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_20%,rgba(37,99,235,0.08),transparent_50%)]" />
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 sm:px-6 py-12">
+      {/* Brilho ambiente em Púrpura-Mil */}
+      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_20%,rgba(155,127,219,0.07),transparent_50%)]" />
 
       <div className="w-full max-w-md relative z-10 space-y-6">
-        
-        {/* Brand Logo & Title */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-900/30 mb-2">
-            <Briefcase className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">
-            Wealth Planning
+
+        {/* Marca */}
+        <div className="text-center space-y-3">
+          <ApuratoSymbol size={52} className="inline-block" />
+          <h1 className="text-4xl text-slate-100">
+            apurato
           </h1>
-          <p className="text-xs text-slate-400 font-medium">
-            Gestão & Planejamento Financeiro Patrimonial
+          <p className="text-sm text-slate-400">
+            Todo número tem <em className="font-serif italic text-blue-400">origem</em>.
           </p>
         </div>
 
@@ -85,7 +83,7 @@ export const LoginView: React.FC = () => {
                   placeholder="seu.email@exemplo.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-950/80 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-600 transition-all outline-none"
+                  className="w-full bg-slate-950/80 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-400 transition-all outline-none"
                 />
               </div>
             </div>
@@ -103,7 +101,7 @@ export const LoginView: React.FC = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950/80 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl pl-9 pr-10 py-2.5 text-xs text-slate-100 placeholder:text-slate-600 transition-all outline-none"
+                  className="w-full bg-slate-950/80 border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl pl-9 pr-10 py-2.5 text-xs text-slate-100 placeholder:text-slate-400 transition-all outline-none"
                 />
                 <button
                   type="button"
@@ -119,7 +117,7 @@ export const LoginView: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-bold shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4 cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-500 hover:bg-blue-400 active:bg-blue-500 text-slate-950 text-xs font-bold shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4 cursor-pointer"
             >
               {isLoading ? (
                 <span>Entrando...</span>

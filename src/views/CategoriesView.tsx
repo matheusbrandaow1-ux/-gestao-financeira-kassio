@@ -114,7 +114,7 @@ export const CategoriesView: React.FC = () => {
           name: gName,
           type: groupItems[0]?.type || 'DESPESA',
           subcategories: groupItems.map(i => i.name),
-          color: groupItems[0]?.color || '#3B82F6',
+          color: groupItems[0]?.color || '#9B7FDB',
           isGroup: true
         };
         groups.push(pseudoGroup);
@@ -173,18 +173,18 @@ export const CategoriesView: React.FC = () => {
   };
 
   return (
-    <div className="wealth-view space-y-8 pb-12">
+    <div className="ap-view space-y-8 pb-12">
       
       {/* Header Banner */}
-      <div className="wealth-page-header flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
+      <div className="ap-page-header flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <FolderTree className="w-3.5 h-3.5" />
             <span>Estrutura de Categorias & Orçamento</span>
             <span>•</span>
             <span className="text-slate-400">{formatMonthLabel(selectedMonth, 'short')}</span>
           </div>
-          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
+          <h1 className="ap-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Mapa de Despesas & Comportamento Financeiro
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
@@ -199,7 +199,7 @@ export const CategoriesView: React.FC = () => {
             className={`px-4 py-2 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-2 ${
               isSyncing 
                 ? 'bg-slate-800 text-slate-400 cursor-not-allowed' 
-                : 'bg-emerald-800 hover:bg-emerald-700 text-white'
+                : 'bg-blue-500 hover:bg-blue-400 text-slate-950'
             }`}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
@@ -224,7 +224,7 @@ export const CategoriesView: React.FC = () => {
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="wealth-metric border-l border-slate-700 pl-4 py-1">
+        <div className="ap-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-xs font-medium">Total categorizado</span>
             <Layers className="w-4 h-4 text-blue-400" />
@@ -233,7 +233,7 @@ export const CategoriesView: React.FC = () => {
           <div className="text-[11px] text-slate-500 mt-1">Despesas no período selecionado</div>
         </div>
 
-        <div className="wealth-metric border-l border-slate-700 pl-4 py-1">
+        <div className="ap-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-xs font-medium">Revisão necessária</span>
             <Tag className="w-4 h-4 text-emerald-400" />
@@ -242,7 +242,7 @@ export const CategoriesView: React.FC = () => {
           <div className="text-[11px] text-slate-500 mt-1">{formatCurrency(categoryCoverage.uncategorizedValue, currency)} sem categoria</div>
         </div>
 
-        <div className="wealth-metric border-l border-slate-700 pl-4 py-1">
+        <div className="ap-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-xs font-medium">Categorias ativas</span>
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -251,7 +251,7 @@ export const CategoriesView: React.FC = () => {
           <div className="text-[11px] text-slate-500 mt-1">Registros preservados no catálogo</div>
         </div>
 
-        <div className="wealth-metric border-l border-slate-700 pl-4 py-1">
+        <div className="ap-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-xs font-medium">Cobertura</span>
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
@@ -264,7 +264,7 @@ export const CategoriesView: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="wealth-toolbar border-y border-slate-800/80 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="ap-toolbar border-y border-slate-800/80 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -281,7 +281,7 @@ export const CategoriesView: React.FC = () => {
             onClick={() => setSelectedTypeFilter('ALL')}
             className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
               selectedTypeFilter === 'ALL'
-                ? 'bg-emerald-800 text-white shadow-sm'
+                ? 'bg-slate-800 text-slate-100 shadow-sm'
                 : 'bg-slate-800 text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -301,7 +301,7 @@ export const CategoriesView: React.FC = () => {
             onClick={() => setSelectedTypeFilter('RECEITA')}
             className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
               selectedTypeFilter === 'RECEITA'
-                ? 'bg-emerald-800 text-white shadow-sm'
+                ? 'bg-slate-800 text-slate-100 shadow-sm'
                 : 'bg-slate-800 text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -338,7 +338,7 @@ export const CategoriesView: React.FC = () => {
             return (
               <div 
                 key={group.id} 
-                className="wealth-taxonomy border-y border-slate-800/80 overflow-hidden transition-all hover:border-slate-700"
+                className="ap-taxonomy border-y border-slate-800/80 overflow-hidden transition-all hover:border-slate-700"
               >
                 {/* Group Accordion Header */}
                 <div 
@@ -351,7 +351,7 @@ export const CategoriesView: React.FC = () => {
                     </button>
                     <span 
                       className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm" 
-                      style={{ backgroundColor: group.color || '#3B82F6' }} 
+                      style={{ backgroundColor: group.color || '#9B7FDB' }} 
                     />
                     <div>
                       <div className="flex items-center gap-2">
@@ -407,7 +407,7 @@ export const CategoriesView: React.FC = () => {
                             <div className="flex items-center gap-2 min-w-0">
                               <span 
                                 className="w-2.5 h-2.5 rounded-full shrink-0" 
-                                style={{ backgroundColor: child.color || group.color || '#3B82F6' }} 
+                                style={{ backgroundColor: child.color || group.color || '#9B7FDB' }} 
                               />
                               <div className="truncate">
                                 <div className="text-xs font-bold text-slate-200 truncate">{child.name}</div>

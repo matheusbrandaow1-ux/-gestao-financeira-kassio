@@ -25,6 +25,7 @@ import {
   Cell 
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
+import { CHART_SERIES_COLORS } from '../lib/chartColors';
 import { AssetOrLiability, AssetClassification, AssetCategory } from '../types';
 import { formatCurrency } from '../lib/money';
 
@@ -76,7 +77,7 @@ export const AssetsView: React.FC = () => {
     .filter(a => a.classification === 'ATIVO')
     .map(a => ({ name: a.name, value: a.value }));
 
-  const ALLOCATION_COLORS = ['#2563EB', '#0D9488', '#10B981', '#6366F1', '#8B5CF6', '#D97706', '#0284C7'];
+  const ALLOCATION_COLORS = CHART_SERIES_COLORS;
 
   const handleOpenCreate = (classification: AssetClassification = 'ATIVO') => {
     setEditingAsset(null);
@@ -128,8 +129,8 @@ export const AssetsView: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-            <span>Balanço Patrimonial & Wealth</span>
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
+            <span>Balanço Patrimonial</span>
             <span>•</span>
             <span>{activeClient.name}</span>
           </div>
@@ -151,7 +152,7 @@ export const AssetsView: React.FC = () => {
           </button>
           <button
             onClick={() => handleOpenCreate('ATIVO')}
-            className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             <span>Adicionar Ativo</span>
@@ -213,17 +214,17 @@ export const AssetsView: React.FC = () => {
               <AreaChart data={netWorthHistory}>
                 <defs>
                   <linearGradient id="assetGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#9B7FDB" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#9B7FDB" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `CHF ${(v / 1000).toFixed(0)}k`} />
+                <XAxis dataKey="date" stroke="#746E84" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#746E84" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `CHF ${(v / 1000).toFixed(0)}k`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px', fontSize: '12px' }}
                   formatter={(val: any) => formatCurrency(Number(val), currency)}
                 />
-                <Area type="monotone" dataKey="netWorth" stroke="#3b82f6" strokeWidth={2.5} fill="url(#assetGrad)" />
+                <Area type="monotone" dataKey="netWorth" stroke="#9B7FDB" strokeWidth={2.5} fill="url(#assetGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -252,7 +253,7 @@ export const AssetsView: React.FC = () => {
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px', fontSize: '12px' }}
                     formatter={(val: any) => formatCurrency(Number(val), currency)}
                   />
                 </PieChart>
@@ -488,7 +489,7 @@ export const AssetsView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold"
                 >
                   Salvar Item
                 </button>

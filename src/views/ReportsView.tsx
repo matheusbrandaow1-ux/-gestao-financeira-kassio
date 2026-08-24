@@ -30,6 +30,7 @@ import {
   Cell 
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
+import { CHART_SERIES_COLORS } from '../lib/chartColors';
 import { formatCurrency, formatPercent } from '../lib/money';
 import { CanonicalTransaction } from '../types';
 import { getPreviousMonth, getTransactionsForMonth, formatMonthLabel } from '../lib/monthUtils';
@@ -90,7 +91,7 @@ export const ReportsView: React.FC = () => {
       .forEach(t => {
         const catName = t.categoryName!;
         const catObj = categories.find(c => c.name === catName);
-        const color = catObj?.color || '#3B82F6';
+        const color = catObj?.color || '';
         const group = catObj?.groupName || 'Geral';
 
         if (!map[catName]) {
@@ -99,7 +100,10 @@ export const ReportsView: React.FC = () => {
         map[catName].amount += getTransactionBaseAmount(t);
       });
 
-    return Object.values(map).sort((a, b) => b.amount - a.amount);
+    // categorias sem cor própria recebem a rampa categórica da marca
+    return Object.values(map)
+      .sort((a, b) => b.amount - a.amount)
+      .map((cat, idx) => ({ ...cat, color: cat.color || CHART_SERIES_COLORS[idx % CHART_SERIES_COLORS.length] }));
   }, [filteredTransactions, categories]);
 
   // Monthly Cash Flow Chart Data
@@ -155,17 +159,17 @@ export const ReportsView: React.FC = () => {
   };
 
   return (
-    <div className="wealth-view space-y-8 pb-12 print:bg-white print:text-black">
+    <div className="ap-view space-y-8 pb-12 print:bg-white print:text-black">
       {/* Header & Filter Controls */}
-      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-7 print:hidden">
+      <div className="ap-page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-7 print:hidden">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Análise Financeira</span>
             <span>•</span>
             <span>{formatMonthLabel(selectedMonth, 'full')}</span>
           </div>
-          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
+          <h1 className="ap-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Relatórios & Análise Financeira
           </h1>
           <p className="text-sm text-slate-400 mt-1">
@@ -179,7 +183,7 @@ export const ReportsView: React.FC = () => {
             <button
               onClick={() => setTimeRange('MONTH')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                timeRange === 'MONTH' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                timeRange === 'MONTH' ? 'bg-slate-800 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Mês Atual ({formatMonthLabel(selectedMonth, 'short')})
@@ -187,7 +191,7 @@ export const ReportsView: React.FC = () => {
             <button
               onClick={() => setTimeRange('QUARTER')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                timeRange === 'QUARTER' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                timeRange === 'QUARTER' ? 'bg-slate-800 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Trimestre
@@ -195,7 +199,7 @@ export const ReportsView: React.FC = () => {
             <button
               onClick={() => setTimeRange('YEAR')}
               className={`px-3 py-1.5 rounded-md font-medium transition-all ${
-                timeRange === 'YEAR' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                timeRange === 'YEAR' ? 'bg-slate-800 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Ano {selectedMonth.slice(0, 4)}
@@ -224,7 +228,7 @@ export const ReportsView: React.FC = () => {
       <div className="hidden print:block mb-6 border-b pb-4">
         <h1 className="text-xl font-bold">Relatório de Planejamento Financeiro e Gestão de Patrimônio</h1>
         <p className="text-sm">Cliente: {activeClient.name} • Moeda Base: {activeClient.baseCurrency} • Residência: {activeClient.residenceCountry}</p>
-        <p className="text-xs text-gray-500">Emitido em: {new Date().toLocaleDateString('pt-BR')} via Plataforma de Wealth Planning</p>
+        <p className="text-xs text-gray-500">Emitido em: {new Date().toLocaleDateString('pt-BR')} via apurato</p>
       </div>
 
       {/* KPI Cards */}
@@ -232,7 +236,7 @@ export const ReportsView: React.FC = () => {
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
           <span className="text-xs text-slate-400 font-medium">Receita Total ({timeRange === 'MONTH' ? 'Mês' : timeRange})</span>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-emerald-400">
+            <span className="text-2xl font-bold font-mono text-emerald-400">
               {formatCurrency(totalIncome, currency)}
             </span>
             <ArrowUpRight className="w-4 h-4 text-emerald-400" />
@@ -242,7 +246,7 @@ export const ReportsView: React.FC = () => {
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
           <span className="text-xs text-slate-400 font-medium">Despesas Totais</span>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-rose-400">
+            <span className="text-2xl font-bold font-mono text-rose-400">
               {formatCurrency(totalExpenses, currency)}
             </span>
             <ArrowDownRight className="w-4 h-4 text-rose-400" />
@@ -252,7 +256,7 @@ export const ReportsView: React.FC = () => {
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
           <span className="text-xs text-slate-400 font-medium">Taxa de Poupança</span>
           <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-bold text-emerald-300">
+              <span className="text-2xl font-bold font-mono text-emerald-300">
               {formatPercent(savingsRate)}
             </span>
             <span className="text-xs text-slate-500 font-mono">
@@ -264,7 +268,7 @@ export const ReportsView: React.FC = () => {
         <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
           <span className="text-xs text-slate-400 font-medium">Investimentos Realizados</span>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-indigo-300">
+            <span className="text-2xl font-bold font-mono text-slate-100">
               {formatCurrency(totalInvestments, currency)}
             </span>
             <TrendingUp className="w-4 h-4 text-indigo-400" />
@@ -277,7 +281,7 @@ export const ReportsView: React.FC = () => {
         <button
           onClick={() => setReportType('CASHFLOW')}
           className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-              reportType === 'CASHFLOW' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              reportType === 'CASHFLOW' ? 'bg-slate-800 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           Fluxo de Caixa Mensal
@@ -286,7 +290,7 @@ export const ReportsView: React.FC = () => {
         <button
           onClick={() => setReportType('CATEGORIES')}
           className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-              reportType === 'CATEGORIES' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              reportType === 'CATEGORIES' ? 'bg-slate-800 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           Distribuição de Despesas
@@ -295,7 +299,7 @@ export const ReportsView: React.FC = () => {
         <button
           onClick={() => setReportType('NETWORTH')}
           className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-              reportType === 'NETWORTH' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              reportType === 'NETWORTH' ? 'bg-slate-800 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           Evolução Patrimonial
@@ -304,7 +308,7 @@ export const ReportsView: React.FC = () => {
         <button
           onClick={() => setReportType('INCOME_STATEMENT')}
           className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
-              reportType === 'INCOME_STATEMENT' ? 'bg-emerald-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              reportType === 'INCOME_STATEMENT' ? 'bg-slate-800 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           DRE Pessoal Detalhada
@@ -325,16 +329,16 @@ export const ReportsView: React.FC = () => {
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyCashflowData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="month" stroke="#64748B" fontSize={11} />
-                <YAxis stroke="#64748B" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
+                <XAxis dataKey="month" stroke="#746E84" fontSize={11} />
+                <YAxis stroke="#746E84" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px' }}
                   formatter={(value: any) => formatCurrency(Number(value), currency)}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="Receitas" fill="#10B981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Despesas" fill="#F43F5E" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Investimentos" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Receitas" fill="#5CAD8C" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Despesas" fill="#C56A6A" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Investimentos" fill="#9B7FDB" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -366,7 +370,7 @@ export const ReportsView: React.FC = () => {
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}
+                    contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px' }}
                     formatter={(value: any) => formatCurrency(Number(value), currency)}
                   />
                 </PieChart>
@@ -424,25 +428,35 @@ export const ReportsView: React.FC = () => {
             <span className="text-xs text-slate-400">Total Acumulado ({currency})</span>
           </div>
 
+          {netWorthHistory.length < 2 ? (
+            <div className="h-72 w-full flex items-center justify-center rounded-xl bg-slate-950/60 border border-slate-800 text-center px-6">
+              <p className="text-sm text-slate-400 max-w-sm">
+                {netWorthHistory.length === 0
+                  ? 'Nenhum fechamento registrado ainda. A evolução patrimonial aparece a partir do primeiro fechamento mensal.'
+                  : '1 fechamento disponível. A curva de evolução aparece a partir do segundo mês registrado.'}
+              </p>
+            </div>
+          ) : (
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={netWorthHistory} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="netWorthReportGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.0}/>
+                    <stop offset="5%" stopColor="#5CAD8C" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#5CAD8C" stopOpacity={0.0}/>
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="date" stroke="#64748B" fontSize={11} />
-                <YAxis stroke="#64748B" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
+                <XAxis dataKey="date" stroke="#746E84" fontSize={11} />
+                <YAxis stroke="#746E84" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px' }}
                   formatter={(value: any) => formatCurrency(Number(value), currency)}
                 />
-                <Area type="monotone" dataKey="netWorth" name="Patrimônio Líquido" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#netWorthReportGrad)" />
+                <Area type="monotone" dataKey="netWorth" name="Patrimônio Líquido" stroke="#5CAD8C" strokeWidth={2.5} fillOpacity={1} fill="url(#netWorthReportGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          )}
         </div>
       )}
 

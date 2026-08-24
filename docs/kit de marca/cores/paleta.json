@@ -1,0 +1,33 @@
+{
+  "marca": "apurato",
+  "versao": "1.0",
+  "conceito": "Todo número tem origem.",
+  "dominio_recomendado": "apurato.finance (principal) · apura.to (hack) · apurato.com/.ch/.app (defensivos)",
+  "cores": {
+    "ardosia":        { "hex": "#14111B", "uso": "fundo base do sistema (modo escuro nativo)" },
+    "ardosia-2":      { "hex": "#1C1826", "uso": "cartões e superfícies" },
+    "ardosia-3":      { "hex": "#262133", "uso": "superfícies elevadas, estados de hover" },
+    "fio":            { "hex": "#322C42", "uso": "linhas, bordas, divisores" },
+    "pergaminho":     { "hex": "#F0EDE4", "uso": "texto principal sobre fundos escuros" },
+    "lapis":          { "hex": "#9A94A8", "uso": "legendas e textos de apoio" },
+    "tinta":          { "hex": "#201C29", "uso": "texto sobre fundos claros" },
+    "purpura-mil":    { "hex": "#9B7FDB", "uso": "origem e ação primária. Um destaque por tela; nunca em massa. Referência: a cédula de CHF 1000" },
+    "purpura-tinta":  { "hex": "#5A4197", "uso": "púrpura sobre fundos claros e impressos" },
+    "verde-conferido":{ "hex": "#5CAD8C", "uso": "semântica: conciliado, variação positiva" },
+    "vermelho-estorno":{ "hex": "#C56A6A", "uso": "semântica: despesa, estorno, variação negativa" },
+    "ambar-pendente": { "hex": "#C9A45C", "uso": "semântica: pendência, aguardando classificação" },
+    "papel-razao":    { "hex": "#EEF0E7", "uso": "fundo de documentos e impressos (verde do papel de livro-razão)" },
+    "papel-razao-2":  { "hex": "#E4E7DB", "uso": "superfícies sobre Papel-Razão" }
+  },
+  "tipografia": {
+    "titulos": "Fraunces",
+    "texto_ui": "Schibsted Grotesk",
+    "dados": "Spline Sans Mono",
+    "google_fonts": "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Schibsted+Grotesk:wght@400;500;700&family=Spline+Sans+Mono:wght@400;500&display=swap",
+    "nota": "Valores financeiros sempre em Spline Sans Mono com numerais tabulares. Formato por moeda: CHF 12'345.60 · R$ 12.345,60 · € 12.345,60"
+  },
+  "marcadores_de_proveniencia": {
+    "regra": "Marcador é rastro, não enfeite: só aparece quando a condição é verdadeira no dado persistido.",
+    "tipos": ["sincronizado", "manual", "convertido", "conciliado"]
+  }
+}

@@ -75,7 +75,7 @@ export const ConceptAssemblyView: React.FC = () => {
   const recurringContract = recurringItems.find(item => /w1|acompanhamento/i.test(item.name));
 
   return (
-    <div className="wealth-view space-y-8 pb-12">
+    <div className="ap-view space-y-8 pb-12">
       <header className="border-b border-slate-800/80 pb-7">
         <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300">
           <ClipboardCheck className="h-3.5 w-3.5" />

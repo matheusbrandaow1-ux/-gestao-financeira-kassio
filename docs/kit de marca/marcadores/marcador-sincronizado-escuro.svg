@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 186 40" width="186" height="40">
+  <rect x="1" y="1" width="184" height="38" rx="9" fill="#1C1826" stroke="#322C42" stroke-width="1.5"/>
+  <g transform="translate(15,9.5)"><g fill="none" stroke="#9B7FDB" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M 5 10 a 6 6 0 0 1 10.4 -2.6"/><path d="M 15.5 4.5 L 15.6 7.6 L 12.5 7.5"/><path d="M 16 11 a 6 6 0 0 1 -10.4 2.6"/><path d="M 5.5 16.5 L 5.4 13.4 L 8.5 13.5"/></g></g>
+  <text x="44" y="25" font-family="'Spline Sans Mono', monospace" font-size="13" letter-spacing="2.4" fill="#F0EDE4">SINCRONIZADO</text>
+</svg>

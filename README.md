@@ -1,6 +1,8 @@
-# Sistema de Gestão e Planejamento Financeiro (Wealth Planning)
+# apurato · Gestão Patrimonial para Consultoria
 
-Plataforma full-stack de **Gestão e Planejamento Patrimonial e Financeiro** para consultoria independente e acompanhamento de clientes com residência fiscal na Suíça (moeda base CHF) e âmbito internacional.
+**apurato** é a plataforma full-stack de **gestão e planejamento patrimonial** para consultoria independente e acompanhamento de clientes com residência fiscal na Suíça (moeda base CHF) e âmbito internacional.
+
+> **Todo número tem origem.** O nome vem de "apurar" (apuração contábil); em italiano, *appurato* significa "verificado, comprovado". A identidade visual, os tokens e as regras de marca vivem em [`docs/kit de marca/`](docs/kit%20de%20marca/LEIA-ME.md).
 
 ---
 
@@ -100,8 +102,9 @@ O sistema é construído como uma aplicação full-stack moderna dividida em:
 ## 4. Frontend
 
 - **Arquitetura**: Single Page Application (SPA) modular com renderização condicional protegida por papéis de acesso (`CONSULTANT` vs. `CLIENT`).
-- **Design System**: Interface com paleta de neutros sofisticados em modo escuro profundo (`slate-900`/`slate-950`), bordas sutis (`border-slate-800`), tipografia monoespaçada para valores monetários (`font-mono`) e touch-targets de 44px+ para dispositivos móveis.
-- **Gráficos e Visualizações**: Recharts e D3 para curvas de evolução patrimonial, decomposição de despesas por categoria (Donut Chart) e matriz Planejado vs. Realizado (Bar Chart).
+- **Design System (apurato v1.0)**: Dark-first sobre Ardósia (`#14111B`), com os tokens da marca aplicados via `@theme` do Tailwind 4 em `src/index.css` — as escalas `slate`/`blue`/`emerald`/`rose`/`amber` resolvem para a paleta apurato em todo o app. Púrpura-Mil (`#9B7FDB`) marca origem de dado e ação primária; Verde-Conferido, Vermelho-Estorno e Âmbar-Pendente são estritamente semânticas. Trio tipográfico: Fraunces (títulos) · Schibsted Grotesk (UI) · Spline Sans Mono com numerais tabulares (valores).
+- **Marcadores de Proveniência**: `src/components/common/ProvenanceTag.tsx` deriva SINCRONIZADO / MANUAL / CONVERTIDO / CONCILIADO exclusivamente do dado persistido (`provider`, `reviewStatus`, campos FX). Valor convertido sempre exibe o original ao lado.
+- **Gráficos e Visualizações**: Recharts com paleta única da marca em `src/lib/chartColors.ts` (SVG não resolve `var()` em atributos; os hex ficam centralizados lá).
 
 ---
 

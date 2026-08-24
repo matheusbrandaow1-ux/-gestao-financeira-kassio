@@ -74,7 +74,7 @@ export const SettingsView: React.FC = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `backup_wealth_planning_${activeClient.name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`);
+    downloadAnchor.setAttribute('download', `backup_apurato_${activeClient.name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -194,7 +194,7 @@ export const SettingsView: React.FC = () => {
             <div className="flex justify-end pt-3 border-t border-slate-800">
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md shadow-blue-900/30 transition-all"
+                className="px-5 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-semibold text-xs shadow-md shadow-blue-900/30 transition-all"
               >
                 Salvar Alterações
               </button>

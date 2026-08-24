@@ -120,17 +120,17 @@ export const RecurrencesView: React.FC = () => {
   };
 
   return (
-    <div className="wealth-view space-y-8 pb-12">
+    <div className="ap-view space-y-8 pb-12">
       
       {/* Header */}
-      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
+      <div className="ap-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <span>Contratos & Pagamentos Recorrentes</span>
             <span>•</span>
             <span>{activeClient.name}</span>
           </div>
-          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
+          <h1 className="ap-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Agenda de Recorrências e Contas Fixas
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
@@ -140,7 +140,7 @@ export const RecurrencesView: React.FC = () => {
 
         <button
           onClick={handleOpenCreate}
-          className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+          className="px-3.5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
         >
           <Plus className="w-4 h-4" />
           <span>Nova Recorrência</span>
@@ -226,7 +226,7 @@ export const RecurrencesView: React.FC = () => {
 
                     {/* Next Due Date */}
                     <td className="py-3 px-4 font-mono text-slate-400">
-                      {new Date(item.nextDueDate).toLocaleDateString('pt-BR')}
+                      {new Date(item.nextDueDate + 'T00:00:00').toLocaleDateString('pt-BR')}
                     </td>
 
                     {/* Category */}
@@ -401,7 +401,7 @@ export const RecurrencesView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold"
                 >
                   Salvar Recorrência
                 </button>

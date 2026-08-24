@@ -239,7 +239,7 @@ export const RulesView: React.FC = () => {
 
           <button
             onClick={handleOpenCreate}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md shadow-blue-900/30 transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-medium text-xs shadow-md shadow-blue-900/30 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Nova Regra</span>
@@ -356,7 +356,7 @@ export const RulesView: React.FC = () => {
             </p>
             <button
               onClick={handleOpenCreate}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-all"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-medium text-xs transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
               Criar Primeira Regra
@@ -705,7 +705,7 @@ export const RulesView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-md shadow-blue-900/30"
+                  className="px-5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-semibold shadow-md shadow-blue-900/30"
                 >
                   {editingRule ? 'Salvar Alterações' : 'Criar Regra'}
                 </button>

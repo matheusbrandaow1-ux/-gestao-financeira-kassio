@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 40" width="168" height="40">
+  <rect x="1" y="1" width="166" height="38" rx="9" fill="#1C1826" stroke="#322C42" stroke-width="1.5"/>
+  <g transform="translate(15,9.5)"><g fill="none" stroke="#9B7FDB" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7.5"/><path d="M 7.2 10.6 L 9.7 13 L 14 7.9"/></g></g>
+  <text x="44" y="25" font-family="'Spline Sans Mono', monospace" font-size="13" letter-spacing="2.4" fill="#F0EDE4">CONCILIADO</text>
+</svg>

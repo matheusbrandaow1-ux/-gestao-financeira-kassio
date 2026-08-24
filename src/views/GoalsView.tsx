@@ -148,17 +148,17 @@ export const GoalsView: React.FC = () => {
   };
 
   return (
-    <div className="wealth-view space-y-8 pb-12">
+    <div className="ap-view space-y-8 pb-12">
       
       {/* Header */}
-      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
+      <div className="ap-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <span>Objetivos & Metas de Vida</span>
             <span>•</span>
             <span>{activeClient.name}</span>
           </div>
-          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
+          <h1 className="ap-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Planejamento de Objetivos Financeiros
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
@@ -168,7 +168,7 @@ export const GoalsView: React.FC = () => {
 
         <button
           onClick={handleOpenCreate}
-          className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+          className="px-3.5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
         >
           <Plus className="w-4 h-4" />
           <span>Novo Objetivo</span>
@@ -257,7 +257,7 @@ export const GoalsView: React.FC = () => {
                   <div>
                     <span className="text-slate-500 block">Data-Alvo:</span>
                     <span className="font-medium text-slate-300">
-                      {new Date(goal.targetDate).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
+                      {new Date(goal.targetDate + 'T00:00:00').toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
                     </span>
                   </div>
                   <div>
@@ -442,7 +442,7 @@ export const GoalsView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold"
                 >
                   {editingGoal ? 'Salvar Alterações' : 'Criar Objetivo'}
                 </button>

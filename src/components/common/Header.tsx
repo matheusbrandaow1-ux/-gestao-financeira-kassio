@@ -47,22 +47,23 @@ export const Header: React.FC<HeaderProps> = () => {
   };
 
   return (
-    <header className="wealth-header sticky top-0 z-30 backdrop-blur border-b text-slate-100 px-4 sm:px-6 py-3 transition-colors">
+    <header className="ap-header sticky top-0 z-30 backdrop-blur border-b text-slate-100 px-4 sm:px-6 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         
         {/* Left: Active Client Callout (Strictly Visible and Prominent) */}
         <div className="flex items-center gap-3">
           <div className="relative flex items-center gap-2.5 px-1 py-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            {/* ponto de origem: o cliente é a fonte dos dados em tela */}
+            <span className="w-2 h-2 rounded-full bg-blue-500" aria-hidden="true" />
             <div className="flex flex-col">
-              <span className="text-[10px] tracking-[0.18em] uppercase font-semibold text-emerald-300">
+              <span className="text-[10px] tracking-[0.18em] uppercase font-semibold text-slate-400">
                 {isConsultant ? 'Cliente Selecionado' : 'Meu Planejamento'}
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-100">
                   {activeClient.name}
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-bold text-emerald-300">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-slate-700 text-[11px] font-mono font-medium text-slate-300">
                   {activeClient.baseCurrency}
                 </span>
                     <span className="text-xs text-slate-400 hidden sm:inline">
@@ -77,7 +78,7 @@ export const Header: React.FC<HeaderProps> = () => {
                 <button
                   type="button"
                   onClick={() => setShowClientDropdown(!showClientDropdown)}
-                  className="p-1 rounded hover:bg-emerald-900/50 text-emerald-300 transition-colors"
+                  className="p-1 rounded hover:bg-slate-800 text-blue-300 transition-colors"
                   title="Trocar Cliente"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -97,7 +98,7 @@ export const Header: React.FC<HeaderProps> = () => {
                           setShowClientDropdown(false);
                         }}
                         className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between hover:bg-slate-800 ${
-                          c.id === activeClient.id ? 'text-emerald-300 font-semibold bg-slate-800/60' : 'text-slate-300'
+                          c.id === activeClient.id ? 'text-blue-300 font-semibold bg-slate-800/60' : 'text-slate-300'
                         }`}
                       >
                         <span>{c.name}</span>
@@ -160,12 +161,12 @@ export const Header: React.FC<HeaderProps> = () => {
           <div className="flex items-center">
             {isConsultant ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
                 <span>CONSULTOR</span>
               </span>
             ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300">
-                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <UserCheck className="w-3.5 h-3.5 text-slate-400" />
                 <span>CLIENTE PF</span>
               </span>
             )}
@@ -173,9 +174,7 @@ export const Header: React.FC<HeaderProps> = () => {
 
           {/* User Profile info */}
           <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-inner text-white ${
-              isConsultant ? 'bg-emerald-800' : 'bg-emerald-700'
-            }`}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs bg-slate-800 border border-slate-700 text-slate-100">
               {user?.displayName ? user.displayName.charAt(0).toUpperCase() : (isConsultant ? 'C' : 'K')}
             </div>
             <div className="hidden xl:flex flex-col text-left">

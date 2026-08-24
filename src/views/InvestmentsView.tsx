@@ -31,12 +31,13 @@ import {
   YAxis 
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
+import { CHART_SERIES_COLORS } from '../lib/chartColors';
 import { AssetOrLiability, InvestmentPortfolio, InvestmentHolding, CurrencyCode } from '../types';
 import { formatCurrency, formatPercent } from '../lib/money';
 import { fxService } from '../lib/fxService';
 import { getDefaultPortfolios, getOriginalInvestmentValue, getInvestmentSummary, isInvestmentAsset } from '../lib/investmentData';
 
-const ALLOCATION_COLORS = ['#34D399', '#F59E0B', '#FB7185', '#A3E635', '#F97316', '#94A3B8'];
+const ALLOCATION_COLORS = CHART_SERIES_COLORS;
 
 export const InvestmentsView: React.FC = () => {
   const { activeClient, assets, assetsLoadState } = useClient();
@@ -186,17 +187,17 @@ export const InvestmentsView: React.FC = () => {
   }, [enrichedPortfolios, selectedCurrencyFilter]);
 
   return (
-    <div className="wealth-view space-y-8 pb-12">
+    <div className="ap-view space-y-8 pb-12">
       
       {/* Top Header */}
-      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
+      <div className="ap-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <span>Gestão de Investimentos Globais</span>
             <span>•</span>
             <span>Residência Fiscal: {activeClient.residenceCountry}</span>
           </div>
-          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
+          <h1 className="ap-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Carteira & Patrimônio Investido
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
@@ -228,7 +229,7 @@ export const InvestmentsView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Total Invested (CHF) */}
-        <div className="wealth-finance-summary border-l-2 border-emerald-400/70 pl-4 py-1">
+        <div className="ap-finance-summary border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Total Investido Consolidado
@@ -249,12 +250,12 @@ export const InvestmentsView: React.FC = () => {
         </div>
 
         {/* BRL Portfolio */}
-        <div className="wealth-finance-summary border-l border-slate-700 pl-4 py-1">
+        <div className="ap-finance-summary border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Carteira Brasil (BRL)
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
               BRL
             </span>
           </div>
@@ -272,12 +273,12 @@ export const InvestmentsView: React.FC = () => {
         </div>
 
         {/* EUR Portfolio */}
-        <div className="wealth-finance-summary border-l border-slate-700 pl-4 py-1">
+        <div className="ap-finance-summary border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               ETFs Globais (EUR)
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
               EUR
             </span>
           </div>
@@ -298,12 +299,12 @@ export const InvestmentsView: React.FC = () => {
         </div>
 
         {/* Swiss Pillar 3a (CHF) */}
-        <div className="wealth-finance-summary border-l border-slate-700 pl-4 py-1">
+        <div className="ap-finance-summary border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Previdência 3a (CHF)
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
               CHF
             </span>
           </div>
@@ -313,9 +314,11 @@ export const InvestmentsView: React.FC = () => {
                 ? 'Não foi possível carregar os dados'
                 : chfPortfolio ? formatCurrency(chfPortfolio.originalTotal, 'CHF') : 'Sem posição CHF'}
             </div>
-            <div className="text-xs text-slate-400 mt-1 flex items-center justify-between">
-              <span>VIAC / 3a Global</span>
-              <span className="text-emerald-400 font-medium">+3,76%</span>
+            {/* sem número inventado: rendimento só quando vier de dado persistido */}
+            <div className="text-xs text-slate-400 mt-1">
+              {chfPortfolio && chfPortfolio.institutions.length > 0
+                ? chfPortfolio.institutions.join(' · ')
+                : 'Aportes em francos suíços'}
             </div>
           </div>
         </div>
@@ -326,7 +329,7 @@ export const InvestmentsView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Asset Class Allocation Chart */}
-        <div className="wealth-section border-b border-slate-800/80 pb-6">
+        <div className="ap-section border-b border-slate-800/80 pb-6">
           <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
             <PieIcon className="w-4 h-4 text-emerald-300" />
             <span>Alocação por Classe de Ativo (CHF)</span>
@@ -350,7 +353,7 @@ export const InvestmentsView: React.FC = () => {
                 </Pie>
                 <Tooltip 
                   formatter={(val: number) => [formatCurrency(val, baseCurrency), 'Total']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px', fontSize: '12px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -368,7 +371,7 @@ export const InvestmentsView: React.FC = () => {
         </div>
 
         {/* Currency Exposure Breakdown */}
-        <div className="wealth-section border-b border-slate-800/80 pb-6">
+        <div className="ap-section border-b border-slate-800/80 pb-6">
           <h2 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
             <Globe2 className="w-4 h-4 text-emerald-400" />
             <span>Exposição Cambial Global</span>
@@ -377,16 +380,16 @@ export const InvestmentsView: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={currencyBreakdownData} layout="vertical" margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
                 <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} width={40} />
+                <YAxis dataKey="name" type="category" stroke="#9A94A8" fontSize={11} width={40} />
                 <Tooltip 
                   formatter={(val: number) => [formatCurrency(val, baseCurrency), 'Equivalente CHF']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px', fontSize: '12px' }}
                 />
-                <Bar dataKey="value" fill="#3B82F6" radius={[0, 4, 4, 0]} barSize={20}>
+                <Bar dataKey="value" fill="#9B7FDB" radius={[0, 4, 4, 0]} barSize={20}>
                   {currencyBreakdownData.map((entry, index) => (
                     <Cell 
                       key={`curr-${index}`} 
-                      fill={entry.name === 'CHF' ? '#10B981' : entry.name === 'EUR' ? '#6366F1' : '#F59E0B'} 
+                      fill={entry.name === 'CHF' ? '#5CAD8C' : entry.name === 'EUR' ? '#9B7FDB' : '#C9A45C'} 
                     />
                   ))}
                 </Bar>
@@ -405,7 +408,7 @@ export const InvestmentsView: React.FC = () => {
         </div>
 
         {/* Strategy & Swiss Tax Shield */}
-        <div className="wealth-section border-b border-slate-800/80 pb-6 flex flex-col justify-between">
+        <div className="ap-section border-b border-slate-800/80 pb-6 flex flex-col justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-indigo-400" />
@@ -436,7 +439,7 @@ export const InvestmentsView: React.FC = () => {
       </div>
 
       {/* Holdings Table */}
-      <div className="wealth-table border-y border-slate-800/80 overflow-hidden">
+      <div className="ap-table border-y border-slate-800/80 overflow-hidden">
         
         {/* Table Header Controls */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -457,7 +460,7 @@ export const InvestmentsView: React.FC = () => {
                 onClick={() => setSelectedCurrencyFilter(curr)}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
                   selectedCurrencyFilter === curr 
-                    ? 'bg-emerald-800 text-emerald-50 shadow-sm'
+                    ? 'bg-slate-800 text-slate-100 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >

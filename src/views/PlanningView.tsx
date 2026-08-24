@@ -125,12 +125,12 @@ export const PlanningView: React.FC = () => {
   };
 
   return (
-    <div className="wealth-view space-y-6 pb-12">
+    <div className="ap-view space-y-6 pb-12">
       
       {/* Header Banner */}
-      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-7">
+      <div className="ap-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <span>Planejamento Mensal Orçamentário</span>
             <span>•</span>
             <span>{formatMonthLabel(selectedMonth, 'full')}</span>
@@ -165,14 +165,14 @@ export const PlanningView: React.FC = () => {
                 setTempPlan(monthlyPlan);
                 setIsEditingTargets(true);
               }}
-              className="px-3.5 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span>Ajustar Metas</span>
             </button>
           ) : (
             <button
               onClick={handleSavePlan}
-              className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Save className="w-3.5 h-3.5" />
               <span>Salvar Metas</span>
@@ -240,8 +240,8 @@ export const PlanningView: React.FC = () => {
               </span>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-xs text-blue-400 font-semibold">Real:</span>
-              <span className="text-sm font-mono font-bold text-blue-400">
+              <span className="text-xs text-slate-400 font-semibold">Real:</span>
+              <span className="text-sm font-mono font-bold text-slate-100">
                 {formatCurrency(realizedInvestments, currency)}
               </span>
             </div>
@@ -274,13 +274,13 @@ export const PlanningView: React.FC = () => {
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-slate-500">Plan:</span>
               <span className="text-xs font-mono font-medium text-slate-300">
-                {formatPercent(plannedSavingsRate * 100)}
+                {formatPercent(plannedSavingsRate)}
               </span>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="text-xs text-emerald-400 font-semibold">Real:</span>
               <span className="text-sm font-mono font-bold text-emerald-400">
-                {formatPercent(realizedSavingsRate * 100)}
+                {formatPercent(realizedSavingsRate)}
               </span>
             </div>
           </div>
@@ -321,7 +321,7 @@ export const PlanningView: React.FC = () => {
                   <tr key={cat.id} className="hover:bg-slate-800/40">
                     <td className="py-3 font-medium text-slate-200">
                       <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color || '#3B82F6' }} />
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color || '#9B7FDB' }} />
                         <span>{cat.name}</span>
                       </div>
                     </td>

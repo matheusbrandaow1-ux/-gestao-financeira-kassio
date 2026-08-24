@@ -110,7 +110,7 @@ export const PendingView: React.FC<PendingViewProps> = ({ onNavigate }) => {
         <div className="flex items-center gap-3">
           <button
             onClick={handleBatchCategorizeWithRules}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-md shadow-blue-900/30 transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-medium text-xs shadow-md shadow-blue-900/30 transition-all"
           >
             <Sparkles className="w-4 h-4 text-amber-300" />
             <span>Auto-Classificar via Regras</span>
@@ -267,7 +267,7 @@ export const PendingView: React.FC<PendingViewProps> = ({ onNavigate }) => {
                       <button
                         onClick={() => handleQuickRecategorize(tx.id, selectedCatId, false)}
                         disabled={!selectedCatId}
-                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs disabled:opacity-40 transition-all"
+                        className="px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-medium text-xs disabled:opacity-40 transition-all"
                       >
                         Salvar
                       </button>

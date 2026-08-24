@@ -407,7 +407,7 @@ export const AIAssistantView: React.FC = () => {
             <button
               onClick={() => handleSendMessage()}
               disabled={!inputMessage.trim() || isLoading}
-              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md shadow-blue-900/30"
+              className="px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md shadow-blue-900/30"
             >
               <Send className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Enviar</span>
@@ -433,7 +433,7 @@ export const AIAssistantView: React.FC = () => {
             <button
               onClick={handleGenerateMonthlySummary}
               disabled={isLoadingSummary}
-              className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
+              className="px-4 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSummary ? 'animate-spin' : ''}`} />
               <span>{isLoadingSummary ? 'Gerando...' : 'Atualizar Resumo'}</span>

@@ -20,8 +20,9 @@ import { useAuth } from '../context/AuthContext';
 import { CanonicalTransaction, TransactionType, ReviewStatus, CurrencyCode } from '../types';
 import { formatCurrency } from '../lib/money';
 import { MonthSelector } from '../components/common/MonthSelector';
-import { getAvailableMonths } from '../lib/monthUtils';
+import { getAvailableMonths, formatDateLabel } from '../lib/monthUtils';
 import { getTransactionBaseAmount } from '../lib/financialMetrics';
+import { ProvenanceTag, transactionProvenance } from '../components/common/ProvenanceTag';
 
 export const TransactionsView: React.FC = () => {
   const { 
@@ -208,17 +209,17 @@ export const TransactionsView: React.FC = () => {
   };
 
   return (
-    <div className="wealth-view space-y-8 pb-12">
+    <div className="ap-view space-y-8 pb-12">
       
       {/* Top Header */}
-      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
+      <div className="ap-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <span>Controle Transacional</span>
             <span>•</span>
             <span>{activeClient.name}</span>
           </div>
-          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
+          <h1 className="ap-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Extrato e Classificação de Transações
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
@@ -230,7 +231,7 @@ export const TransactionsView: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setIsNewTxOpen(true)}
-              className="px-3.5 py-2 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Nova Transação</span>
@@ -241,19 +242,19 @@ export const TransactionsView: React.FC = () => {
 
       {/* Summary Filter Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="wealth-metric border-l-2 border-emerald-400/70 pl-4 py-1 flex items-center justify-between">
+        <div className="ap-metric border-l border-slate-700 pl-4 py-1 flex items-center justify-between">
           <span className="text-xs text-slate-400">Total Receitas Filtradas</span>
           <span className="text-sm font-bold font-mono text-emerald-400">
             +{formatCurrency(filteredIncome, activeClient.baseCurrency)}
           </span>
         </div>
-        <div className="wealth-metric border-l-2 border-rose-400/70 pl-4 py-1 flex items-center justify-between">
+        <div className="ap-metric border-l border-slate-700 pl-4 py-1 flex items-center justify-between">
           <span className="text-xs text-slate-400">Total Despesas Filtradas</span>
           <span className="text-sm font-bold font-mono text-rose-400">
             -{formatCurrency(filteredExpenses, activeClient.baseCurrency)}
           </span>
         </div>
-        <div className="wealth-metric border-l-2 border-slate-600 pl-4 py-1 flex items-center justify-between">
+        <div className="ap-metric border-l border-slate-700 pl-4 py-1 flex items-center justify-between">
           <span className="text-xs text-slate-400">Resultado Líquido</span>
           <span className={`text-sm font-bold font-mono ${filteredIncome - filteredExpenses >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {formatCurrency(filteredIncome - filteredExpenses, activeClient.baseCurrency)}
@@ -262,7 +263,7 @@ export const TransactionsView: React.FC = () => {
       </div>
 
       {/* Filter Control Bar */}
-      <div className="wealth-toolbar border-y border-slate-800/80 py-4 space-y-3">
+      <div className="ap-toolbar border-y border-slate-800/80 py-4 space-y-3">
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           
           {/* Search Input */}
@@ -403,19 +404,19 @@ export const TransactionsView: React.FC = () => {
       </div>
 
       {/* Transactions Data Table */}
-      <div className="wealth-table border-y border-slate-800/80 overflow-hidden">
+      <div className="ap-table border-y border-slate-800/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="py-3 px-4">Data</th>
-                <th className="py-3 px-4">Descrição / Estabelecimento</th>
-                <th className="py-3 px-4">Conta</th>
-                <th className="py-3 px-4">Categoria</th>
-                <th className="py-3 px-4">Tipo</th>
-                <th className="py-3 px-4 text-right">Valor</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Ações</th>
+                <th className="py-3 px-2.5">Data</th>
+                <th className="py-3 px-2.5">Descrição</th>
+                <th className="py-3 px-2.5">Conta</th>
+                <th className="py-3 px-2.5">Categoria</th>
+                <th className="py-3 px-2.5">Tipo</th>
+                <th className="py-3 px-2.5 text-right">Valor</th>
+                <th className="py-3 px-2.5 text-center">Status</th>
+                <th className="py-3 px-2.5 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/70">
@@ -434,12 +435,12 @@ export const TransactionsView: React.FC = () => {
                     <tr key={tx.id} className="hover:bg-slate-800/40 transition-colors">
                       
                       {/* Date */}
-                      <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-400">
-                        {new Date(tx.date).toLocaleDateString('pt-BR')}
+                      <td className="py-3 px-2.5 whitespace-nowrap font-mono text-slate-400">
+                        {formatDateLabel(tx.date)}
                       </td>
 
                       {/* Description & Merchant */}
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-2.5">
                         <div className="font-semibold text-slate-100 flex items-center gap-1.5">
                           <span>{tx.merchant || tx.description}</span>
                           {tx.isRecurring && (
@@ -447,19 +448,22 @@ export const TransactionsView: React.FC = () => {
                               <Repeat className="w-3 h-3" />
                             </span>
                           )}
+                          {transactionProvenance(tx).map(p => (
+                            <ProvenanceTag key={p.kind} kind={p.kind} detail={p.detail} compact />
+                          ))}
                         </div>
-                        <div className="text-[11px] text-slate-400 truncate max-w-xs">
+                        <div className="text-[11px] text-slate-400 truncate max-w-[11.5rem]">
                           {tx.description}
                         </div>
                       </td>
 
                       {/* Account */}
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-300">
+                      <td className="py-3 px-2.5 whitespace-nowrap text-slate-300">
                         {tx.accountName || accounts.find(a => a.id === tx.accountId)?.name || 'Conta'}
                       </td>
 
                       {/* Category Selector Dropdown */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-3 px-2.5 whitespace-nowrap">
                         <select
                           value={tx.categoryId || ''}
                           onChange={(e) => handleCategoryChange(tx, e.target.value)}
@@ -492,7 +496,7 @@ export const TransactionsView: React.FC = () => {
                       </td>
 
                       {/* Type Badge */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-3 px-2.5 whitespace-nowrap">
                         <span className={`
                           px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider
                           ${tx.transactionType === 'RECEITA' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : ''}
@@ -506,14 +510,20 @@ export const TransactionsView: React.FC = () => {
                       </td>
 
                       {/* Amount */}
-                      <td className="py-3 px-4 text-right whitespace-nowrap font-mono font-bold">
+                      <td className="py-3 px-2.5 text-right whitespace-nowrap font-mono font-bold">
                           <span className={isIncome ? 'text-emerald-400' : isInvest ? 'text-emerald-300' : 'text-slate-100'}>
                           {isIncome ? '+' : '-'}{formatCurrency(tx.amount, tx.currency)}
                         </span>
+                        {/* original acompanha o convertido; jamais se somam */}
+                        {tx.currencyOriginal && tx.currencyOriginal !== tx.currency && typeof tx.amountOriginal === 'number' && (
+                          <div className="text-[10px] font-normal text-slate-500">
+                            orig. {formatCurrency(Math.abs(tx.amountOriginal), tx.currencyOriginal as CurrencyCode)}
+                          </div>
+                        )}
                       </td>
 
                       {/* Review Status */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                      <td className="py-3 px-2.5 text-center whitespace-nowrap">
                         {tx.reviewStatus === 'REVISADA' ? (
                           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
                             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -533,7 +543,7 @@ export const TransactionsView: React.FC = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <td className="py-3 px-2.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setEditingTx(tx)}
@@ -592,7 +602,7 @@ export const TransactionsView: React.FC = () => {
               </button>
               <button
                 onClick={handleConfirmCreateRule}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm"
+                className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-bold shadow-sm"
               >
                 Sim, Criar Regra Automática
               </button>
@@ -740,7 +750,7 @@ export const TransactionsView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold"
                 >
                   Salvar Transação
                 </button>
@@ -876,7 +886,7 @@ export const TransactionsView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold cursor-pointer"
                 >
                   {isConsultant ? 'Salvar Alterações' : 'Salvar Categoria'}
                 </button>

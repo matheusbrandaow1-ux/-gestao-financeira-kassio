@@ -89,7 +89,7 @@ export class GeminiProvider implements AIProvider {
       subcategories: c.subcategories || []
     }));
 
-    const prompt = `Você é o motor de inteligência financeira de alta precisão do sistema de Wealth Planning na Suíça.
+    const prompt = `Você é o motor de inteligência financeira de alta precisão do apurato, painel de gestão patrimonial na Suíça.
 Analise a transação financeira abaixo e sugira a melhor categoria e subcategoria estritamente a partir da lista de categorias existentes e atribuíveis fornecidas.
 
 TRANSAÇÃO:
@@ -256,7 +256,7 @@ INSTRUÇÕES RIGOROSAS:
 
     const isConsultant = userRole === 'CONSULTANT' || userRole === 'ADMIN';
 
-    const systemInstruction = `Você é o "Assistente Financeiro Inteligente" da plataforma de Wealth Planning e Planejamento Financeiro na Suíça.
+    const systemInstruction = `Você é o "Assistente Financeiro Inteligente" do apurato, painel de gestão patrimonial e planejamento financeiro na Suíça.
 Você está interagindo com ${isConsultant ? `o Consultor Financeiro responsável pela conta do cliente ${clientName}` : `o cliente ${clientName}`}.
 
 DADOS FINANCEIROS REAIS DO CLIENTE (Utilize ESTRITAMENTE estes dados para responder):

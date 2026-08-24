@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import { getCapabilities } from '../lib/capabilities';
 import { CanonicalAccount, AccountType, CurrencyCode } from '../types';
 import { formatCurrency } from '../lib/money';
+import { ProvenanceTag, accountProvenance } from '../components/common/ProvenanceTag';
 
 export const AccountsView: React.FC = () => {
   const { role } = useAuth();
@@ -99,17 +100,17 @@ export const AccountsView: React.FC = () => {
   };
 
   return (
-    <div className="wealth-view space-y-8 pb-12">
+    <div className="ap-view space-y-8 pb-12">
       
       {/* Header */}
-      <div className="wealth-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
+      <div className="ap-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-7">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-300 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <span>Gestão de Contas Bancárias & Custódias</span>
             <span>•</span>
             <span>{activeClient.name}</span>
           </div>
-          <h1 className="wealth-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
+          <h1 className="ap-title text-2xl sm:text-3xl font-semibold text-slate-100 mt-2">
             Contas Conectadas e Manuais
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
@@ -128,7 +129,7 @@ export const AccountsView: React.FC = () => {
           </button>}
           {canEditAccounts && <button
             onClick={handleOpenCreate}
-            className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             <span>Nova Conta</span>
@@ -148,7 +149,7 @@ export const AccountsView: React.FC = () => {
             {canManageIntegrations && <button
               onClick={() => triggerLunchMoneySync()}
               disabled={isSyncing}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+              className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>Sincronizar Lunch Money</span>
@@ -174,12 +175,10 @@ export const AccountsView: React.FC = () => {
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      acc.provider === 'LUNCH_MONEY' 
-                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' 
-                        : 'bg-slate-700 text-slate-300'
-                    }`}>
-                      {acc.provider === 'LUNCH_MONEY' ? 'Lunch Money v2' : 'Manual'}
+                    <span className="flex items-center gap-1">
+                      {accountProvenance(acc).map(p => (
+                        <ProvenanceTag key={p.kind} kind={p.kind} detail={p.detail} />
+                      ))}
                     </span>
 
                     <div className="flex items-center gap-1">
@@ -224,6 +223,13 @@ export const AccountsView: React.FC = () => {
                     <div className={`text-xl font-bold font-mono ${isNegative ? 'text-rose-400' : 'text-slate-100'}`}>
                       {formatCurrency(acc.balance, acc.currency)}
                     </div>
+                    {/* convertido acompanha o original; jamais se somam */}
+                    {acc.originalCurrency && acc.baseCurrency && acc.originalCurrency !== acc.baseCurrency && typeof acc.balanceBase === 'number' && (
+                      <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                        ≈ {formatCurrency(acc.balanceBase, acc.baseCurrency)}
+                        {acc.fxRateTimestamp ? ` · FX de ${new Date(acc.fxRateTimestamp).toLocaleDateString('pt-BR')}` : ''}
+                      </div>
+                    )}
                   </div>
 
                   <span className="px-2 py-1 rounded bg-slate-800 text-xs font-mono font-bold text-slate-300 border border-slate-700">
@@ -333,7 +339,7 @@ export const AccountsView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold"
                 >
                   Salvar Conta
                 </button>

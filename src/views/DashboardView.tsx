@@ -32,6 +32,7 @@ import {
   Cell 
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
+import { CHART_SERIES_COLORS } from '../lib/chartColors';
 import { useAuth } from '../context/AuthContext';
 import { getCapabilities } from '../lib/capabilities';
 import { formatCurrency, formatPercent, calculateProgressPercent } from '../lib/money';
@@ -144,16 +145,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const currentNetWorth = totalAssets !== null && totalLiabilities !== null
     ? totalAssets - totalLiabilities
     : null;
-  const formatBaseValue = (value: number | null, sourceHasData: boolean, sourceHasError: boolean) => {
+  const patrimonyHasData = accounts.length > 0 || assets.length > 0;
+  const patrimonyHasError = accountsLoadState === 'error' || assetsLoadState === 'error';
+
+  // Status de indisponibilidade do dado (null = há valor real para exibir).
+  // Voz da marca: status nunca se veste de número — renderiza menor, neutro e em sans.
+  const baseValueStatus = (value: number | null, sourceHasData: boolean, sourceHasError: boolean): string | null => {
     if (sourceHasError) return 'Não foi possível carregar os dados';
     if (!sourceHasData) return 'Nenhum dado registrado';
-    return value === null ? 'Conversão indisponível' : formatCurrency(value, currency);
+    return value === null ? 'Conversão indisponível' : null;
   };
-  const formatTransactionValue = (value: number, hasMatchingTransactions: boolean, sign = '') => {
+  const transactionValueStatus = (hasMatchingTransactions: boolean): string | null => {
     if (transactionsLoadState === 'error') return 'Não foi possível carregar os dados';
     if (transactionsLoadState === 'empty' || !hasMatchingTransactions) return 'Nenhuma movimentação';
-    return `${sign}${formatCurrency(value, currency)}`;
+    return null;
   };
+  const formatBaseValue = (value: number | null, sourceHasData: boolean, sourceHasError: boolean) => {
+    return baseValueStatus(value, sourceHasData, sourceHasError) ?? formatCurrency(value as number, currency);
+  };
+  // Valor em escala de destaque, ou status discreto quando o dado não existe.
+  const MetricValue: React.FC<{ status: string | null; className: string; children: React.ReactNode }> = ({ status, className, children }) =>
+    status
+      ? <div className="font-sans text-sm text-slate-500">{status}</div>
+      : <div className={className}>{children}</div>;
 
   // Available Liquid Balance (Checking + Cash + Savings)
   const availableBalance = useMemo(() => {
@@ -175,16 +189,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   }, [accounts, currency]);
 
   const accountCurrencyBalances = useMemo(() => {
-    const balances = new Map<string, number>();
+    const balances = new Map<string, { amount: number; allHavePersistedBase: boolean }>();
     accounts.forEach(account => {
       const currencyCode = account.originalCurrency || account.currency;
       const originalBalance = account.originalBalance ?? account.balance;
-      balances.set(currencyCode, (balances.get(currencyCode) || 0) + originalBalance);
+      const hasPersistedBase = typeof account.balanceBase === 'number';
+      const entry = balances.get(currencyCode) || { amount: 0, allHavePersistedBase: true };
+      balances.set(currencyCode, {
+        amount: entry.amount + originalBalance,
+        allHavePersistedBase: entry.allHavePersistedBase && hasPersistedBase,
+      });
     });
-    return Array.from(balances.entries()).map(([currencyCode, amount]) => ({
+    // conversão persistida (balanceBase) conta como disponível — é a mesma
+    // fonte que o patrimônio líquido soma; o rótulo não pode contradizê-la
+    return Array.from(balances.entries()).map(([currencyCode, entry]) => ({
       currencyCode,
-      amount,
-      conversionAvailable: currencyCode === currency || hasRateToCHF(currencyCode)
+      amount: entry.amount,
+      conversionAvailable: currencyCode === currency || entry.allHavePersistedBase || hasRateToCHF(currencyCode)
     }));
   }, [accounts, currency]);
 
@@ -234,8 +255,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   }, [previousMonthTransactions]);
 
   // Month-over-Month calculations
-  const incomeMoM = prevIncome > 0 ? ((realizedIncome - prevIncome) / prevIncome) * 100 : null;
-  const expenseMoM = prevExpenses > 0 ? ((realizedExpenses - prevExpenses) / prevExpenses) * 100 : null;
+  const incomeMoM = prevIncome > 0 ? (realizedIncome - prevIncome) / prevIncome : null;
+  const expenseMoM = prevExpenses > 0 ? (realizedExpenses - prevExpenses) / prevExpenses : null;
 
   // Chronological Multi-Month Patrimonial Evolution Data Points
   const chronologicalMonths = useMemo(() => {
@@ -282,7 +303,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const categorizedExpensesTotal = Object.values(categorySpendingMap)
     .reduce((sum, value) => sum + Math.abs(value), 0);
 
-  const PIE_COLORS = ['#2563EB', '#0D9488', '#3B82F6', '#8B5CF6', '#F59E0B', '#64748B'];
+  const PIE_COLORS = CHART_SERIES_COLORS;
 
   // Comparison Planned vs Realized Data for Selected Month
   const plannedVsRealizedData = [
@@ -312,7 +333,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       {/* Top Banner Context with Dynamic Month Selector */}
       <div className="dashboard-context flex flex-col sm:flex-row sm:items-center justify-between gap-5 border-b border-slate-800/80 pb-6">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-semibold text-emerald-400 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-medium text-blue-400 uppercase tracking-[0.2em]">
             <span>Visão Patrimonial e Orçamentária</span>
             <span>•</span>
             <span>{formatMonthLabel(selectedMonth, 'full')}</span>
@@ -374,14 +395,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       <section className="dashboard-hero border-b border-slate-800/80 pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-8 items-end">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Patrimônio líquido</p>
-            <div className="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight text-slate-50 font-mono">
-              {formatBaseValue(currentNetWorth, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}
-            </div>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">Patrimônio líquido</p>
+            {/* assinatura da marca: a linha de origem sob o número principal */}
+            <div className="ap-origem mt-3" aria-hidden="true" />
+            <MetricValue
+              status={baseValueStatus(currentNetWorth, patrimonyHasData, patrimonyHasError)}
+              className="text-4xl sm:text-5xl font-semibold tracking-tight text-slate-50 font-mono"
+            >
+              {currentNetWorth !== null && formatCurrency(currentNetWorth, currency)}
+            </MetricValue>
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+              Base {activeClient.baseCurrency}
+              {lastSyncedAt ? ` · sincronizado em ${new Date(lastSyncedAt).toLocaleDateString('pt-BR')}` : ''}
+            </p>
             <div className="mt-5 grid grid-cols-3 gap-4 max-w-xl">
-              <div><p className="text-[11px] text-slate-500">Liquidez</p><p className="mt-1 text-sm font-mono text-slate-200">{formatBaseValue(availableBalance, accounts.length > 0, accountsLoadState === 'error')}</p></div>
-              <div><p className="text-[11px] text-slate-500">Ativos</p><p className="mt-1 text-sm font-mono text-slate-200">{formatBaseValue(totalAssets, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}</p></div>
-              <div><p className="text-[11px] text-slate-500">Passivos</p><p className="mt-1 text-sm font-mono text-rose-300">{formatBaseValue(totalLiabilities, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}</p></div>
+              <div><p className="text-[11px] text-slate-500">Liquidez</p><MetricValue status={baseValueStatus(availableBalance, accounts.length > 0, accountsLoadState === 'error')} className="mt-1 text-sm font-mono text-slate-200">{availableBalance !== null && formatCurrency(availableBalance, currency)}</MetricValue></div>
+              <div><p className="text-[11px] text-slate-500">Ativos</p><MetricValue status={baseValueStatus(totalAssets, patrimonyHasData, patrimonyHasError)} className="mt-1 text-sm font-mono text-slate-200">{totalAssets !== null && formatCurrency(totalAssets, currency)}</MetricValue></div>
+              <div><p className="text-[11px] text-slate-500">Passivos</p><MetricValue status={baseValueStatus(totalLiabilities, patrimonyHasData, patrimonyHasError)} className="mt-1 text-sm font-mono text-rose-300">{totalLiabilities !== null && formatCurrency(totalLiabilities, currency)}</MetricValue></div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-l border-slate-800/80 pl-6">
@@ -399,31 +429,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Patrimônio Líquido */}
-        <div className="dashboard-metric border-l-2 border-blue-400/70 pl-4 py-1">
+        <div className="dashboard-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Patrimônio Líquido Total</span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold font-mono text-slate-100">
-              {formatBaseValue(currentNetWorth, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}
-            </div>
+            <MetricValue
+              status={baseValueStatus(currentNetWorth, patrimonyHasData, patrimonyHasError)}
+              className="text-2xl font-bold font-mono text-slate-100"
+            >
+              {currentNetWorth !== null && formatCurrency(currentNetWorth, currency)}
+            </MetricValue>
             <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
-              <span>Ativos: {formatBaseValue(totalAssets, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}</span>
+              <span>Ativos: {formatBaseValue(totalAssets, patrimonyHasData, patrimonyHasError)}</span>
               <span>•</span>
-              <span>Passivos: {formatBaseValue(totalLiabilities, accounts.length > 0 || assets.length > 0, accountsLoadState === 'error' || assetsLoadState === 'error')}</span>
+              <span>Passivos: {formatBaseValue(totalLiabilities, patrimonyHasData, patrimonyHasError)}</span>
             </div>
           </div>
         </div>
 
         {/* Saldo Líquido Disponível */}
-        <div className="dashboard-metric border-l-2 border-emerald-400/70 pl-4 py-1">
+        <div className="dashboard-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Liquidez Disponível</span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold font-mono text-slate-100">
-              {formatBaseValue(availableBalance, accounts.length > 0, accountsLoadState === 'error')}
-            </div>
+            <MetricValue
+              status={baseValueStatus(availableBalance, accounts.length > 0, accountsLoadState === 'error')}
+              className="text-2xl font-bold font-mono text-slate-100"
+            >
+              {availableBalance !== null && formatCurrency(availableBalance, currency)}
+            </MetricValue>
             <p className="text-xs text-slate-400 mt-1">
               Contas correntes, poupança e caixa
             </p>
@@ -444,14 +480,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Receitas do Mês Selecionado */}
-        <div className="dashboard-metric border-l-2 border-emerald-400/70 pl-4 py-1">
+        <div className="dashboard-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Receitas ({formatMonthLabel(selectedMonth, 'short')})</span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold font-mono text-emerald-400">
-              {formatTransactionValue(realizedIncome, currentMonthTransactions.some(t => t.transactionType === 'RECEITA'), '+')}
-            </div>
+            <MetricValue
+              status={transactionValueStatus(currentMonthTransactions.some(t => t.transactionType === 'RECEITA'))}
+              className="text-2xl font-bold font-mono text-emerald-400"
+            >
+              +{formatCurrency(realizedIncome, currency)}
+            </MetricValue>
             <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
               {incomeMoM !== null ? (
                 <span className={`flex items-center font-medium ${incomeMoM >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -459,27 +498,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   {formatPercent(Math.abs(incomeMoM))} vs mês anterior
                 </span>
               ) : (
-                <span>{currentMonthTransactions.filter(t => t.transactionType === 'RECEITA').length} entradas registradas</span>
+                <span>{(() => { const n = currentMonthTransactions.filter(t => t.transactionType === 'RECEITA').length; return n === 1 ? '1 entrada registrada' : `${n} entradas registradas`; })()}</span>
               )}
             </div>
           </div>
         </div>
 
         {/* Despesas do Mês Selecionado */}
-        <div className="dashboard-metric border-l-2 border-rose-400/70 pl-4 py-1">
+        <div className="dashboard-metric border-l border-slate-700 pl-4 py-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Despesas ({formatMonthLabel(selectedMonth, 'short')})</span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold font-mono text-rose-400">
-              {formatTransactionValue(realizedExpenses, currentMonthTransactions.some(t => t.transactionType === 'DESPESA'), '-')}
-            </div>
+            <MetricValue
+              status={transactionValueStatus(currentMonthTransactions.some(t => t.transactionType === 'DESPESA'))}
+              className="text-2xl font-bold font-mono text-rose-400"
+            >
+              -{formatCurrency(realizedExpenses, currency)}
+            </MetricValue>
             <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
               <span className={`font-semibold ${monthNetResult >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 Resultado: {formatCurrency(monthNetResult, currency)}
               </span>
               <span>•</span>
-              <span>Taxa: {formatPercent(savingsRate * 100)}</span>
+              <span>Taxa: {formatPercent(savingsRate)}</span>
             </div>
           </div>
         </div>
@@ -488,7 +530,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       <section className="border-y border-slate-800/80 py-7">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-300">Investment intelligence</p>
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-blue-400">Carteira de investimentos</p>
             <h2 className="text-xl font-semibold text-slate-100 mt-1">Investimentos</h2>
           </div>
           <button
@@ -517,11 +559,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                         : 'Nenhuma posição registrada'}
                 </p>
               </div>
-              <p className="text-[11px] text-slate-500 mt-3 truncate" title={group.institutions.join(' · ')}>
-                {assetsLoadState === 'error'
-                  ? 'Não foi possível carregar os dados'
-                  : group.institutions.length > 0 ? group.institutions.join(' · ') : 'Nenhuma posição registrada'}
-              </p>
+              {group.institutions.length > 0 && (
+                <p className="text-[11px] text-slate-500 mt-3 truncate" title={group.institutions.join(' · ')}>
+                  {group.institutions.join(' · ')}
+                </p>
+              )}
               {group.positions > 0 && (
                 <div className="mt-3 space-y-1.5">
                   {group.assets.slice(0, 3).map(holding => (
@@ -551,7 +593,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 Evolução Mensal: Receitas vs Despesas
               </h3>
               <p className="text-xs text-slate-400">
-                Série histórica de todas as movimentações ({chronologicalMonths.length} meses disponíveis)
+                Série histórica de todas as movimentações ({chronologicalMonths.length === 1 ? '1 mês disponível' : `${chronologicalMonths.length} meses disponíveis`})
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">
@@ -570,14 +612,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             {patrimonialEvolutionData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={patrimonialEvolutionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="month" stroke="#64748b" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                  <XAxis dataKey="month" stroke="#746E84" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#746E84" fontSize={11} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px', fontSize: '12px' }}
                     formatter={(value: any) => [`${formatCurrency(Number(value), currency)}`, '']}
                   />
-                  <Bar dataKey="receitas" name="Receitas" fill="#10B981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="despesas" name="Despesas" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="receitas" name="Receitas" fill="#5CAD8C" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="despesas" name="Despesas" fill="#C56A6A" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -611,15 +653,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={plannedVsRealizedData} layout="vertical" margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-                <XAxis type="number" stroke="#64748b" fontSize={10} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
-                <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
+                <XAxis type="number" stroke="#746E84" fontSize={10} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                <YAxis type="category" dataKey="name" stroke="#746E84" fontSize={11} tickLine={false} width={96} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px', fontSize: '12px' }}
                   formatter={(value: any) => [`${formatCurrency(Number(value), currency)}`, '']}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="Planejado" fill="#3B82F6" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="Realizado" fill="#10B981" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="Planejado" fill="#9B7FDB" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="Realizado" fill="#5CAD8C" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -663,7 +705,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                       ))}
                     </Pie>
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                      contentStyle={{ backgroundColor: '#1C1826', borderColor: '#322C42', borderRadius: '8px', fontSize: '12px' }}
                       formatter={(val: any) => [`${formatCurrency(Number(val), currency)}`, '']}
                     />
                   </PieChart>

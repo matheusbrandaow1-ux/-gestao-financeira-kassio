@@ -1,6 +1,6 @@
 {
-  "name": "Gestão e Planejamento Financeiro",
-  "description": "Plataforma full-stack de wealth management e planejamento financeiro para consultores e clientes, com sincronização Lunch Money, objetivos, patrimônio, regras e dashboard em CHF.",
+  "name": "apurato",
+  "description": "apurato — painel de gestão patrimonial para consultoria. Multi-moeda, multi-cliente, uma única fonte da verdade: sincronização Lunch Money, planejamento, patrimônio, regras e relatórios em CHF. Todo número tem origem.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
