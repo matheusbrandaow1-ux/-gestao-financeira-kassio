@@ -1,0 +1,345 @@
+@import "tailwindcss";
+
+/*
+ * apurato · tokens de marca v1.0
+ * Conceito: todo número tem origem.
+ *
+ * O rebrand acontece aqui: as escalas Tailwind usadas pelas views
+ * (slate/blue/indigo/emerald/rose/amber) são redefinidas com a paleta
+ * apurato. As views mantêm o vocabulário padrão do Tailwind; a marca
+ * é a única fonte de cor do sistema.
+ */
+@theme {
+  /* tipografia — trio fixo da marca */
+  --font-sans: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-mono: 'Spline Sans Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* neutros — família Ardósia (slate) */
+  --color-slate-50: #F7F5EF;
+  --color-slate-100: #F0EDE4;  /* Pergaminho: texto principal */
+  --color-slate-200: #D9D6DE;
+  --color-slate-300: #B8B3C2;
+  --color-slate-400: #9A94A8;  /* Cinza-Lápis: legendas e apoios */
+  --color-slate-500: #746E84;
+  --color-slate-600: #524B64;
+  --color-slate-700: #322C42;  /* Fio: linhas, bordas, divisores */
+  --color-slate-750: #2C2640;
+  --color-slate-800: #262133;  /* Ardósia-3: superfícies elevadas, hover */
+  --color-slate-900: #1C1826;  /* Ardósia-2: cartões e superfícies */
+  --color-slate-950: #14111B;  /* Ardósia: fundo base do sistema */
+  --color-gray-500: #746E84;
+
+  /* marca — Púrpura-Mil (blue e indigo: ação primária, origem) */
+  --color-blue-100: #EDE7F9;
+  --color-blue-200: #D9CDF3;
+  --color-blue-300: #C3B0EA;
+  --color-blue-400: #AC94E2;
+  --color-blue-500: #9B7FDB;   /* Púrpura-Mil */
+  --color-blue-600: #8266C4;
+  --color-blue-700: #6C52A8;
+  --color-blue-800: #5A4197;   /* Púrpura-Tinta */
+  --color-blue-900: #453175;
+  --color-blue-950: #2A2046;
+  --color-indigo-100: #EDE7F9;
+  --color-indigo-200: #D9CDF3;
+  --color-indigo-300: #C3B0EA;
+  --color-indigo-400: #AC94E2;
+  --color-indigo-500: #9B7FDB;
+  --color-indigo-600: #8266C4;
+  --color-indigo-700: #6C52A8;
+  --color-indigo-800: #5A4197;
+  --color-indigo-900: #453175;
+  --color-indigo-950: #2A2046;
+
+  /* semântica — Verde-Conferido (emerald: conciliado, variação positiva) */
+  --color-emerald-100: #DCEFE6;
+  --color-emerald-200: #BCE0CF;
+  --color-emerald-300: #93CBB0;
+  --color-emerald-400: #74BC9E;
+  --color-emerald-500: #5CAD8C;
+  --color-emerald-600: #4A9376;
+  --color-emerald-700: #3C7861;
+  --color-emerald-800: #2F5E4C;
+  --color-emerald-900: #244839;
+  --color-emerald-950: #172E25;
+
+  /* semântica — Vermelho-Estorno (rose: despesa, estorno, variação negativa) */
+  --color-rose-100: #F5E2E2;
+  --color-rose-200: #EBC9C9;
+  --color-rose-300: #DCA5A5;
+  --color-rose-400: #D08787;
+  --color-rose-500: #C56A6A;
+  --color-rose-600: #A75454;
+  --color-rose-700: #894444;
+  --color-rose-800: #6B3535;
+  --color-rose-900: #4F2828;
+  --color-rose-950: #331A1A;
+
+  /* semântica — Âmbar-Pendente (amber: pendência, aguardando classificação) */
+  --color-amber-100: #F2E8D2;
+  --color-amber-200: #E8D6AC;
+  --color-amber-300: #DBC084;
+  --color-amber-400: #D2B26E;
+  --color-amber-500: #C9A45C;
+  --color-amber-600: #AB8949;
+  --color-amber-700: #8B6F3B;
+  --color-amber-800: #6C562E;
+  --color-amber-900: #4F3F22;
+  --color-amber-950: #332916;
+}
+
+:root {
+  color-scheme: dark;
+  /* aliases nomeados da marca, para CSS próprio */
+  --ap-ardosia: #14111B;
+  --ap-ardosia-2: #1C1826;
+  --ap-ardosia-3: #262133;
+  --ap-fio: #322C42;
+  --ap-pergaminho: #F0EDE4;
+  --ap-lapis: #9A94A8;
+  --ap-tinta: #201C29;
+  --ap-purpura: #9B7FDB;
+  --ap-purpura-tinta: #5A4197;
+  --ap-conferido: #5CAD8C;
+  --ap-estorno: #C56A6A;
+  --ap-pendente: #C9A45C;
+}
+
+html {
+  background: var(--ap-ardosia);
+}
+
+body {
+  margin: 0;
+  background: var(--ap-ardosia);
+  color: var(--ap-pergaminho);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fraunces para títulos de tela; utilitários de peso das views resolvem
+   para os pesos carregados (400/500/600). */
+h1, h2 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--ap-purpura);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--ap-purpura);
+  color: var(--ap-tinta);
+}
+
+/* valores financeiros sempre com numerais tabulares */
+.font-mono,
+.ap-number,
+.ap-table td,
+.ap-table th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- casca do app ---- */
+.ap-shell {
+  background: var(--ap-ardosia);
+}
+
+.ap-sidebar {
+  background: var(--ap-ardosia);
+  border-color: var(--ap-fio);
+}
+
+.ap-header {
+  background: color-mix(in srgb, var(--ap-ardosia) 88%, transparent);
+  border-color: var(--ap-fio);
+}
+
+/* ---- assinatura da marca: a linha de origem ----
+   Um ponto púrpura de onde a linha do razão parte. Usada sob números
+   de destaque; é o único ornamento que a identidade permite. */
+.ap-origem {
+  display: flex;
+  align-items: center;
+  height: 2px;
+  margin-bottom: 0.75rem;
+}
+
+.ap-origem::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ap-purpura);
+  flex: none;
+}
+
+.ap-origem::after {
+  content: '';
+  height: 2px;
+  flex: 1;
+  max-width: 18rem;
+  background: linear-gradient(90deg, var(--ap-purpura), var(--ap-fio));
+  transform-origin: left;
+  animation: ap-tracar 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) both 0.15s;
+}
+
+@keyframes ap-tracar {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-origem::after {
+    animation: none;
+  }
+}
+
+/* ---- números de destaque ---- */
+.ap-title,
+.ap-display {
+  font-family: var(--font-serif);
+  font-weight: 500;
+}
+
+.ap-number {
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+}
+
+/* ---- controles e formulários ---- */
+body input,
+body select,
+body textarea {
+  border-color: var(--ap-fio);
+}
+
+body input:focus,
+body select:focus,
+body textarea:focus {
+  border-color: var(--ap-purpura);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ap-purpura) 55%, transparent);
+}
+
+.category-control {
+  max-width: 8.75rem;
+  min-height: 30px;
+  background-color: var(--ap-ardosia-3);
+  color: var(--ap-lapis);
+  font-size: 0.75rem;
+}
+
+.category-control:focus {
+  border-color: var(--ap-purpura);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ap-purpura) 55%, transparent);
+}
+
+/* ---- estruturas compartilhadas das views ---- */
+.ap-toolbar input,
+.ap-toolbar select,
+.ap-toolbar button,
+.ap-page-header button {
+  min-height: 40px;
+}
+
+.ap-table table {
+  border-collapse: collapse;
+}
+
+.ap-table th {
+  white-space: nowrap;
+  letter-spacing: 0.12em;
+}
+
+.ap-table tbody tr {
+  min-height: 56px;
+}
+
+.ap-view,
+.dashboard-shell {
+  animation: ap-reveal 420ms ease-out both;
+}
+
+.ap-metric,
+.dashboard-metric,
+.ap-finance-summary {
+  background: linear-gradient(110deg, color-mix(in srgb, var(--ap-ardosia-2) 82%, transparent), color-mix(in srgb, var(--ap-ardosia-2) 30%, transparent));
+  border-radius: 0.75rem;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+  padding-right: 0.9rem;
+}
+
+@keyframes ap-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-view,
+  .dashboard-shell {
+    animation: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .ap-view {
+    padding-bottom: 2rem;
+  }
+
+  .ap-page-header {
+    align-items: flex-start;
+  }
+
+  .ap-page-header h1 {
+    line-height: 1.15;
+  }
+
+  .ap-toolbar {
+    align-items: stretch;
+  }
+
+  .ap-toolbar > * {
+    max-width: 100%;
+  }
+
+  .ap-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ap-table table {
+    min-width: 760px;
+  }
+
+  .ap-table td,
+  .ap-table th {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .ap-taxonomy > div {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .ap-display {
+    font-size: clamp(2rem, 11vw, 3rem);
+  }
+}

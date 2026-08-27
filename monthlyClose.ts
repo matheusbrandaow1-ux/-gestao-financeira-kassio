@@ -1,67 +1,28 @@
-import { Router, Request, Response } from 'express';
-import { requireAuth, requireConsultant, resolveAuthorizedClientId } from './auth';
-import { MonthlyClose, MonthlyCloseStatus } from '../../src/types';
-import { transitionMonthlyClose } from '../../src/lib/monthlyClose';
-import { getMonthlyClose, saveMonthlyClose, saveMonthlyCloseAudit } from '../data/monthlyCloseStore';
+import { MonthlyClose, MonthlyCloseStatus } from '../types';
 
-const router = Router();
-router.get('/:month', requireAuth, async (req: Request, res: Response) => {
-  const access = resolveAuthorizedClientId(req, req.query.clientId as string);
-  if (!access.isAllowed) return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Acesso não autorizado.' });
-  try {
-    const close = await getMonthlyClose(access.authorizedClientId, req.params.month);
-    return res.json({ success: true, close: close || null });
-  } catch {
-    return res.status(503).json({ success: false, code: 'PERSISTENCE_UNAVAILABLE', message: 'Persistência server-side indisponível.' });
+export function getCloseBlockers(summary: MonthlyClose['validationSummary']): string[] {
+  const blockers = [...summary.blockers];
+  if (!summary.accountsReconciled) blockers.push('ACCOUNTS_NOT_RECONCILED');
+  if (summary.uncategorizedCount > 0) blockers.push('UNCATEGORIZED_TRANSACTIONS');
+  if (summary.possibleDuplicates > 0) blockers.push('POSSIBLE_DUPLICATES');
+  return Array.from(new Set(blockers));
+}
+
+export function transitionMonthlyClose(
+  close: MonthlyClose,
+  nextStatus: MonthlyCloseStatus,
+  actorId: string,
+  now: string = new Date().toISOString()
+): MonthlyClose {
+  if (nextStatus === 'REVIEW' && close.status !== 'OPEN') {
+    throw new Error('INVALID_MONTHLY_CLOSE_TRANSITION');
   }
-});
-
-router.post('/:month', requireConsultant, async (req: Request, res: Response) => {
-  const access = resolveAuthorizedClientId(req, req.body?.clientId as string);
-  if (!access.isAllowed) return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'Acesso não autorizado.' });
-
-  const month = req.params.month;
-  let existing: MonthlyClose | null;
-  try {
-    existing = await getMonthlyClose(access.authorizedClientId, month);
-  } catch {
-    return res.status(503).json({ success: false, code: 'PERSISTENCE_UNAVAILABLE', message: 'Persistência server-side indisponível.' });
+  if (nextStatus === 'CLOSED') {
+    if (close.status !== 'REVIEW') throw new Error('MONTH_MUST_BE_IN_REVIEW');
+    const blockers = getCloseBlockers(close.validationSummary);
+    if (blockers.length > 0) throw new Error(`MONTH_HAS_BLOCKERS:${blockers.join(',')}`);
+    return { ...close, status: 'CLOSED', closedAt: now, closedBy: actorId };
   }
-  const now = new Date().toISOString();
-  const requestedStatus = (req.body?.status || 'OPEN') as MonthlyCloseStatus;
-  const base: MonthlyClose = existing || {
-    id: `close-${access.authorizedClientId}-${month}`,
-    clientId: access.authorizedClientId,
-    month,
-    status: 'OPEN',
-    openedAt: now,
-    validationSummary: req.body?.validationSummary || {
-      accountsReconciled: false,
-      transactionCount: 0,
-      uncategorizedCount: 0,
-      possibleTransfers: 0,
-      possibleDuplicates: 0,
-      reviewedIncome: 0,
-      reviewedExpenses: 0,
-      recurringCount: 0,
-      plannedVsRealizedChecked: false,
-      blockers: []
-    }
-  };
-
-  try {
-    const actorId = (req as any).user.id;
-    const next = requestedStatus === 'OPEN' && base.status === 'CLOSED'
-      ? { ...base, status: 'OPEN' as const, reopenedAt: now, reopenedBy: actorId }
-      : requestedStatus === base.status ? base : transitionMonthlyClose(base, requestedStatus, actorId, now);
-    await saveMonthlyClose(next);
-    if (base.status === 'CLOSED' && next.status === 'OPEN') {
-      await saveMonthlyCloseAudit(access.authorizedClientId, month, actorId, now);
-    }
-    return res.json({ success: true, close: next });
-  } catch (error) {
-    return res.status(409).json({ success: false, code: 'MONTHLY_CLOSE_BLOCKED', message: 'O fechamento mensal possui blockers ou transição inválida.' });
-  }
-});
-
-export default router;
+  if (nextStatus === 'REVIEW') return { ...close, status: 'REVIEW', reviewedAt: now };
+  return { ...close, status: 'OPEN' };
+}
