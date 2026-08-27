@@ -1,0 +1,1039 @@
+PROMPT MESTRE DE RECUPERAÇÃO, RESTAURAÇÃO E FINALIZAÇÃO DO SISTEMA
+PROJETO: gestão-financeira-kassio
+OBJETIVO: restaurar integralmente as funcionalidades e o design premium que já estavam corretos, corrigir os dados atualmente zerados e concluir o sistema SEM destruir, substituir ou regredir o que já funciona.
+
+==================================================
+0. REGRA ABSOLUTA DE SEGURANÇA
+==================================================
+
+ANTES DE QUALQUER ALTERAÇÃO:
+
+1. NÃO faça deploy.
+2. NÃO faça push.
+3. NÃO faça commit.
+4. NÃO altere banco de dados.
+5. NÃO altere schema.
+6. NÃO crie migration.
+7. NÃO apague dados.
+8. NÃO recategorize transações já categorizadas.
+9. NÃO renomeie categorias existentes.
+10. NÃO duplique categorias.
+11. NÃO duplique investimentos.
+12. NÃO sobrescreva saldos.
+13. NÃO sobrescreva transações.
+14. NÃO sobrescreva objetivos.
+15. NÃO altere credenciais.
+16. NÃO altere autenticação.
+17. NÃO altere Lunch Money API key.
+18. NÃO altere CLIENT_EMAIL, CLIENT_PASSWORD, CONSULTANT_PASSWORD, DATABASE_URL ou SESSION_SECRET.
+19. NÃO altere a infraestrutura Render durante esta execução.
+20. NÃO altere PORT.
+21. NÃO faça rollback.
+22. NÃO faça cherry-pick cego.
+23. NÃO substitua a aplicação inteira por uma versão anterior.
+24. NÃO reescreva o motor financeiro.
+25. NÃO altere funcionalidades que já estejam corretas.
+
+A tarefa é RESTAURAR e CORRIGIR de forma cirúrgica.
+
+A prioridade é:
+A. preservar dados reais;
+B. restaurar as funcionalidades premium;
+C. restaurar o design premium;
+D. corrigir os zeros indevidos;
+E. validar;
+F. somente depois aguardar aprovação humana.
+
+==================================================
+1. CRIAR PONTO DE SEGURANÇA LOCAL
+==================================================
+
+Execute apenas leitura inicialmente:
+
+git status
+git branch --show-current
+git log --oneline --decorate -20
+git diff --name-only
+git diff --stat
+
+Identifique o commit atual e localize no histórico, se existirem, estes commits conhecidos:
+
+1a35dd6 = "feat: premium redesign with FX sync and categorization improvements"
+08bf96f = "style: redesign dashboard visual hierarchy"
+f204c74 = "fix: restore investment data source"
+771061a = "fix: correct expense percentages and restore investments"
+75f7a64 = "fix financial reconciliation and multi-currency"
+
+NÃO aplique automaticamente nenhum deles.
+
+Compare apenas os diffs desses commits contra o estado atual para entender exatamente quais funcionalidades foram perdidas.
+
+Se a árvore estiver limpa, crie apenas uma branch LOCAL de segurança, sem push:
+
+backup/pre-final-recovery
+
+Não altere main nesta etapa.
+
+==================================================
+2. OBJETIVO FUNCIONAL FINAL
+==================================================
+
+O sistema deve terminar com TODAS estas características ao mesmo tempo:
+
+- design premium e profissional;
+- Dashboard sofisticado;
+- funcionamento atual preservado;
+- mês inicial igual ao mês atual;
+- sincronização Lunch Money preservada;
+- transações reais preservadas;
+- categorização preservada;
+- motor financeiro preservado;
+- multi-moeda preservada;
+- investimentos reais preservados;
+- patrimônio real preservado;
+- liquidez real preservada;
+- objetivos preservados;
+- categorias preservadas;
+- relatórios preservados;
+- recorrências preservadas;
+- planejamento preservado;
+- autenticação preservada;
+- administração preservada;
+- responsividade mobile preservada.
+
+NÃO é permitido resolver um item quebrando outro.
+
+==================================================
+3. ESTADO VISÍVEL ATUAL QUE PRECISA SER CORRIGIDO
+==================================================
+
+O sistema voltou visualmente, porém o Dashboard está mostrando indevidamente:
+
+PATRIMÔNIO LÍQUIDO:
+CHF 0.00
+
+LIQUIDEZ:
+CHF 0.00
+
+ATIVOS:
+CHF 0.00
+
+RECEITAS:
+CHF 0.00
+
+DESPESAS:
+CHF 0.00
+
+INVESTMENT INTELLIGENCE:
+Grupo Brasil = R$ 0.00
+Grupo Europa = € 0.00
+Grupo Suíça = CHF 0.00
+
+Isso NÃO corresponde ao estado financeiro real anteriormente confirmado.
+
+A correção deve recuperar os dados pelas FONTES REAIS já existentes no sistema.
+
+NÃO hardcode valores finais como substituição do dado real.
+
+==================================================
+4. FONTES DE DADOS REAIS
+==================================================
+
+Audite as fontes existentes antes de modificar código.
+
+Investimentos:
+clients/{clientId}/assets
+
+Transações:
+Lunch Money / fonte já integrada no sistema
+
+Contas:
+fonte já existente do cliente
+
+FX:
+serviço FX já criado no projeto
+
+Categorias:
+coleção/lista existente; preservar IDs e nomes
+
+Objetivos:
+fonte persistida existente
+
+CLV:
+somente usar se realmente existir em uma fonte confiável do projeto.
+Se não existir, não inventar.
+
+Para cada painel, identifique:
+- fonte;
+- transformação;
+- moeda original;
+- conversão;
+- fallback;
+- estado de loading;
+- estado de ausência de dados;
+- estado de erro.
+
+NUNCA transformar erro de carregamento em zero financeiro silencioso.
+
+==================================================
+5. CORREÇÃO DOS INVESTIMENTOS
+==================================================
+
+A aba Investimentos e o bloco "Investment Intelligence" no Dashboard devem voltar a mostrar os dados REAIS.
+
+Agrupar obrigatoriamente por moeda/região:
+
+GRUPO BRASIL
+Moeda original: BRL
+Mostrar em R$.
+
+GRUPO EUROPA
+Moeda original: EUR
+Mostrar em €.
+
+GRUPO SUÍÇA
+Moeda original: CHF
+Mostrar em CHF.
+
+O bloco no Dashboard deve exibir:
+- total original do grupo;
+- moeda original;
+- quantidade de posições;
+- equivalente em CHF quando taxa FX válida estiver disponível;
+- instituição/banco/corretora quando aplicável;
+- sem duplicar ativos.
+
+Os investimentos detalhados devem continuar mostrando:
+- ticker;
+- nome;
+- classe;
+- instituição;
+- moeda original;
+- valor original;
+- taxa FX;
+- valor convertido para CHF;
+- rentabilidade;
+- P/L;
+- base de custo quando existente.
+
+Ativos conhecidos historicamente no sistema incluem, se realmente ainda existirem na fonte persistida:
+- B3:PORTFOLIO
+- B3:RENDA_FIXA
+- VUAG
+- VWCE
+- 3A:GLOBAL100
+
+NÃO recrie esses itens manualmente se a coleção real já os contém.
+
+NÃO use lista vazia como fallback quando assets falhar.
+
+O fallback anterior que protegia a visualização deve ser preservado de forma compatível com a fonte persistida real.
+
+==================================================
+6. MULTI-MOEDA E FX
+==================================================
+
+A aplicação deve preservar corretamente:
+
+BRL
+EUR
+CHF
+
+A moeda base do cliente continua CHF.
+
+Valores originais devem SEMPRE permanecer visíveis em sua moeda de origem.
+
+A conversão não pode apagar o valor original.
+
+Regras:
+
+- BRL permanece R$ no valor original.
+- EUR permanece € no valor original.
+- CHF permanece CHF no valor original.
+- equivalente consolidado pode ser calculado em CHF.
+- jamais mostrar "0" por falta de taxa FX.
+- se FX estiver indisponível, mostrar "Conversão indisponível" mantendo o valor original.
+
+FX pós-sincronização:
+Após sincronização Lunch Money, o sistema pode atualizar as taxas cambiais usando o serviço FX já previsto no projeto.
+
+NÃO depender da IA para inventar câmbio.
+Usar provider confiável já implementado, preferencialmente Frankfurter/ECB, conforme arquitetura existente.
+
+A taxa deve:
+- ter timestamp;
+- ser armazenada somente na estrutura FX já existente;
+- não alterar o valor original;
+- usar fallback previamente validado;
+- não impedir o restante do sistema de funcionar.
+
+==================================================
+7. LIQUIDEZ
+==================================================
+
+No Dashboard, "Liquidez Disponível" deve exibir:
+
+1. total consolidado em CHF;
+2. saldos originais por moeda;
+3. conversão para CHF quando FX válido estiver disponível.
+
+Exemplo de estrutura visual:
+
+Liquidez Disponível
+CHF X'XXX.XX
+
+Original BRL: R$ X.XXX,XX
+Equivalente CHF: CHF X'XXX.XX
+
+Original CHF: CHF X'XXX.XX
+
+Se houver EUR:
+Original EUR: € X.XXX,XX
+Equivalente CHF: CHF X'XXX.XX
+
+NÃO converter silenciosamente.
+Sempre identificar moeda original e equivalente.
+
+==================================================
+8. PATRIMÔNIO LÍQUIDO
+==================================================
+
+O painel principal deve manter:
+
+Patrimônio Líquido
+Liquidez
+Ativos
+Passivos
+
+O patrimônio deve considerar os dados reais disponíveis.
+
+Não usar valores inventados.
+
+Não confundir:
+- saldo bancário;
+- investimentos;
+- patrimônio;
+- liquidez.
+
+A lógica financeira preexistente deve ser preservada.
+
+==================================================
+9. MÊS PADRÃO
+==================================================
+
+Ao abrir o aplicativo:
+
+- o mês selecionado deve ser o mês corrente;
+- timezone: Europe/Zurich;
+- NÃO iniciar em junho de 2027;
+- NÃO usar data fixa;
+- NÃO alterar navegação manual de meses;
+- meses anteriores continuam acessíveis normalmente.
+
+==================================================
+10. TRANSAÇÕES
+==================================================
+
+Manter integralmente:
+
+- busca;
+- filtros;
+- conta;
+- categoria;
+- tipo;
+- status;
+- moeda;
+- recorrentes;
+- edição;
+- classificação;
+- histórico;
+- sincronização.
+
+Não alterar dados existentes.
+
+Na sincronização Lunch Money:
+- importar apenas o que ainda não existe;
+- deduplicar por ID externo;
+- não duplicar transações;
+- preservar human override;
+- preservar categoria confirmada manualmente;
+- categorização automática somente para transações que realmente precisam.
+
+==================================================
+11. CATEGORIZAÇÃO
+==================================================
+
+REGRAS ABSOLUTAS:
+
+CATEGORY IDS MODIFIED:
+NO
+
+CATEGORY NAMES MODIFIED:
+NO
+
+CATEGORY DUPLICATES CREATED:
+NONE
+
+CATEGORY DATA MODIFIED:
+NO
+
+Não criar categorias novas se já houver equivalente existente.
+
+Não renomear categorias.
+
+Não substituir IDs.
+
+Não duplicar.
+
+Não sobrescrever categoria definida manualmente.
+
+A IA de categorização pode melhorar sugestão apenas para itens sem categoria/pendentes.
+
+Usar, na ordem:
+1. human override existente;
+2. regra persistida;
+3. histórico semelhante;
+4. merchant/descrição;
+5. IA como sugestão;
+6. pendência humana se confiança insuficiente.
+
+==================================================
+12. CORREÇÃO DAS PORCENTAGENS DOS GASTOS
+==================================================
+
+Restaurar a correção que já havia sido feita.
+
+O erro anterior multiplicava por 100 um valor já convertido em percentual.
+
+A porcentagem de cada categoria deve ser:
+
+valor_categoria / total_despesas_categorizadas * 100
+
+Exemplo:
+R$ 100 de R$ 1000 = 10%, NÃO 1000%.
+
+Garantir:
+- soma aproximada 100%;
+- arredondamento visual adequado;
+- sem porcentagens absurdas como 4961,1%;
+- valores absolutos preservados.
+
+==================================================
+13. DASHBOARD — DESIGN PREMIUM
+==================================================
+
+Restaurar o padrão visual premium alcançado anteriormente.
+
+NÃO voltar ao design genérico antigo.
+
+Direção:
+- wealth management;
+- private banking;
+- family office;
+- fintech suíça contemporânea;
+- alto padrão;
+- sóbrio;
+- elegante;
+- profissional;
+- poucos ruídos visuais;
+- alta hierarquia informacional;
+- aparência de produto final, não protótipo.
+
+Evitar azul genérico como cor dominante.
+
+Usar a paleta premium já criada no projeto, preservando consistência.
+
+Preferências:
+- fundo escuro sofisticado;
+- verde mineral/esmeralda refinado;
+- off-white;
+- cinzas profundos;
+- vermelho apenas para negativo;
+- âmbar apenas para atenção;
+- azul somente se funcionalmente necessário, nunca como identidade dominante.
+
+Manter:
+- sidebar premium;
+- cabeçalho compacto;
+- cartões de alta densidade;
+- bordas discretas;
+- espaçamento consistente;
+- tipografia forte;
+- números financeiros legíveis;
+- microcopy profissional;
+- gráficos limpos.
+
+Não usar:
+- gradientes exagerados;
+- neon;
+- sombras pesadas;
+- excesso de cards;
+- bordas chamativas;
+- ícones decorativos sem função.
+
+==================================================
+14. ESTRUTURA DO DASHBOARD
+==================================================
+
+Restaurar a estrutura premium já validada:
+
+A. Header
+- cliente selecionado;
+- moeda;
+- residência fiscal;
+- timezone;
+- status Lunch Money;
+- perfil consultor;
+- sincronização.
+
+B. Contexto
+- Visão Patrimonial e Orçamentária;
+- mês atual;
+- última sincronização.
+
+C. Alertas
+- somente se houver pendência real;
+- botão de classificar transações;
+- sem alertas falsos.
+
+D. Patrimônio líquido
+- valor principal em CHF;
+- liquidez;
+- ativos;
+- passivos;
+- breakdown BRL/CHF/EUR quando aplicável.
+
+E. Cards principais
+- Patrimônio Líquido Total;
+- Liquidez Disponível;
+- Receitas do mês;
+- Despesas do mês.
+
+F. Investment Intelligence
+- Grupo Brasil;
+- Grupo Europa;
+- Grupo Suíça;
+- valores reais;
+- moedas corretas;
+- "Ver carteira completa".
+
+G. Evolução Mensal
+- receitas vs despesas;
+- histórico real;
+- sem dados falsos.
+
+H. Planejado x Realizado
+- dados reais;
+- mês selecionado.
+
+I. Principais Gastos
+- distribuição por categoria;
+- porcentagens corretas;
+- valores absolutos;
+- donut/gráfico limpo.
+
+J. Contas Conectadas
+- contas reais;
+- moeda;
+- saldo.
+
+K. Metas Patrimoniais
+- objetivos reais.
+
+==================================================
+15. ABA INVESTIMENTOS
+==================================================
+
+Restaurar o layout premium e os dados reais.
+
+Seções:
+
+- total investido consolidado;
+- carteira Brasil BRL;
+- ETFs globais EUR;
+- Previdência 3a CHF;
+- alocação por classe;
+- exposição cambial;
+- diretrizes estratégicas e tributárias;
+- posições detalhadas.
+
+Não zerar valores por ausência de FX.
+
+Se FX não existir:
+- mostrar valor original;
+- mostrar "Conversão indisponível";
+- não excluir posição;
+- não reduzir total original a zero.
+
+==================================================
+16. ABA CATEGORIAS — DESIGN
+==================================================
+
+Melhorar o design sem alterar nenhuma categoria.
+
+Objetivo:
+não parecer uma tabela administrativa genérica.
+
+Pode melhorar:
+- agrupamento visual;
+- hierarquia;
+- chips;
+- indicadores;
+- espaçamento;
+- busca;
+- estado de revisão;
+- nível de confiança;
+- volume por categoria;
+- indicadores de pendência.
+
+NÃO alterar dados.
+
+==================================================
+17. OBJETIVOS
+==================================================
+
+Preservar dados existentes.
+
+Melhorar somente apresentação se necessário.
+
+Mostrar:
+- objetivo;
+- prazo;
+- acumulado;
+- meta;
+- aporte mínimo;
+- progresso;
+- status.
+
+Sem inventar valores.
+
+==================================================
+18. PLANEJAMENTO
+==================================================
+
+Preservar:
+- orçamento;
+- planejado x realizado;
+- duplicar mês;
+- ajustar metas;
+- categorias existentes;
+- renda;
+- despesas;
+- investimentos;
+- proteção.
+
+Não alterar motor.
+
+==================================================
+19. MONTAGEM DO CONCEITO
+==================================================
+
+A Montagem do Conceito é EXCLUSIVAMENTE para este cliente e para esta entrega.
+
+REGRA MAIS IMPORTANTE:
+
+NÃO AUTOMATIZAR.
+
+NÃO criar:
+- cron;
+- listener;
+- trigger;
+- job;
+- geração automática;
+- geração por sincronização;
+- geração por login;
+- geração para outros clientes;
+- motor genérico.
+
+Ela é uma montagem pontual.
+
+Se não existir persistência segura sem mudança estrutural:
+- NÃO alterar schema;
+- NÃO criar migration;
+- NÃO inventar banco novo;
+- manter como apresentação derivada marcada como PARTIAL.
+
+Não usar números dos prints de referência do S1NC.
+
+Os prints são SOMENTE referência visual/conceitual.
+
+Usar apenas dados reais do sistema.
+
+A montagem deve contemplar, quando houver dados suficientes:
+- panorama patrimonial;
+- orçamento atual;
+- orçamento sugerido;
+- reserva de emergência;
+- aposentadoria;
+- objetivos;
+- plano de aportes;
+- proteção;
+- relatório final.
+
+Se não houver dados suficientes:
+mostrar claramente "Dados insuficientes", nunca inventar.
+
+==================================================
+20. CLV
+==================================================
+
+Se o sistema não possui fonte real de CLV:
+- NÃO criar CLV;
+- NÃO inventar CLV;
+- NÃO inferir CLV sem base;
+- marcar como indisponível.
+
+Se existir fonte real:
+usar somente leitura.
+
+==================================================
+21. ESTADOS DE LOADING / ERRO / VAZIO
+==================================================
+
+Corrigir o padrão que atualmente transforma falha em zero.
+
+Distinguir:
+
+LOADING:
+"Carregando dados..."
+
+EMPTY REAL:
+"Nenhuma posição registrada"
+
+ERROR:
+"Não foi possível carregar os dados"
+
+FX ERROR:
+"Conversão indisponível"
+
+ZERO REAL:
+R$ 0,00 / € 0,00 / CHF 0.00 somente se a fonte real retornar zero.
+
+Nunca usar zero como fallback genérico de erro.
+
+==================================================
+22. RESPONSIVIDADE
+==================================================
+
+Validar:
+
+Desktop 1440
+Laptop 1280
+Tablet
+iPhone/Safari mobile
+
+No mobile:
+- nada cortado;
+- cards empilhados;
+- tabela adaptada;
+- filtros usáveis;
+- gráficos legíveis;
+- menu funcional;
+- valores não estouram container;
+- headers não sobrepõem;
+- sem scroll horizontal desnecessário.
+
+==================================================
+23. PERFORMANCE
+==================================================
+
+Não introduzir dependências pesadas desnecessárias.
+
+Se o bundle estiver >500 KB:
+- não bloquear entrega;
+- apenas registrar warning;
+- não fazer grande refactor agora.
+
+==================================================
+24. ARQUIVOS — ESCOPO CONTROLADO
+==================================================
+
+Antes de editar, identificar quais arquivos realmente precisam mudar.
+
+Possíveis arquivos já alterados historicamente:
+- App.tsx
+- Sidebar.tsx
+- Header.tsx
+- index.css
+- DashboardView.tsx
+- InvestmentsView.tsx
+- CategoriesView.tsx
+- TransactionsView.tsx
+- ConceptAssemblyView.tsx
+- investmentData.ts
+- fxService.ts
+- sync.ts
+- lunchmoney.ts
+- ClientContext.tsx
+
+NÃO alterar todos automaticamente.
+
+Alterar apenas os estritamente necessários.
+
+==================================================
+25. PROIBIDO
+==================================================
+
+NÃO:
+- reescrever arquitetura;
+- mudar banco;
+- mudar schema;
+- migrar dados;
+- apagar dados;
+- alterar autenticação;
+- alterar credenciais;
+- trocar Lunch Money;
+- trocar provider FX sem necessidade;
+- alterar categorias;
+- duplicar categorias;
+- duplicar investimentos;
+- inventar valores;
+- hardcode de saldos;
+- hardcode de patrimônio;
+- hardcode de transações;
+- hardcode de taxas;
+- hardcode de metas;
+- remover funcionalidades;
+- simplificar funcionalidades;
+- alterar PORT;
+- alterar Render;
+- fazer deploy;
+- fazer push;
+- fazer commit antes de aprovação.
+
+==================================================
+26. ORDEM EXATA DA EXECUÇÃO
+==================================================
+
+FASE 1 — AUDITORIA
+Somente leitura.
+
+FASE 2 — DIAGNÓSTICO
+Identificar por que os dados reais estão zerados.
+
+FASE 3 — RESTAURAÇÃO CIRÚRGICA
+Reaplicar somente lógica comprovadamente perdida dos commits corretos.
+
+FASE 4 — DESIGN
+Restaurar o premium sem tocar no motor.
+
+FASE 5 — QA LOCAL
+Validar dados, UI, mobile, multi-moeda, investimentos, categorias.
+
+FASE 6 — RELATÓRIO
+Parar.
+
+NÃO COMMIT.
+NÃO PUSH.
+NÃO DEPLOY.
+
+==================================================
+27. TESTES OBRIGATÓRIOS
+==================================================
+
+Executar:
+
+npm run lint
+npm test
+npm run build
+git diff --check
+
+Também executar checagens específicas:
+
+- mês atual = correto;
+- categorias duplicadas = zero;
+- investimentos duplicados = zero;
+- transações duplicadas = zero;
+- IDs de categorias preservados;
+- nomes de categorias preservados;
+- valores originais preservados;
+- BRL exibido como BRL;
+- EUR exibido como EUR;
+- CHF exibido como CHF;
+- FX não converte erro em zero;
+- investment groups não exibem zero quando a fonte contém dados;
+- dashboard não exibe zero quando a fonte contém dados;
+- human override preservado;
+- Lunch Money preservado;
+- autenticação preservada.
+
+==================================================
+28. VALIDAÇÃO CONTRA O HISTÓRICO
+==================================================
+
+Comparar cuidadosamente com os commits:
+
+1a35dd6
+08bf96f
+f204c74
+771061a
+75f7a64
+
+Objetivo:
+recuperar as melhorias que existiam antes do rollback SEM importar regressões.
+
+NÃO fazer cherry-pick inteiro se o commit também contém mudanças não desejadas.
+
+Use diff seletivo.
+
+==================================================
+29. RELATÓRIO FINAL OBRIGATÓRIO
+==================================================
+
+Retorne exatamente:
+
+RECOVERY REVIEW:
+PASS / FAIL
+
+CURRENT BRANCH:
+[...]
+
+CURRENT COMMIT:
+[...]
+
+FILES MODIFIED:
+[...]
+
+DESIGN PREMIUM RESTORED:
+YES / NO
+
+DASHBOARD RESTORED:
+YES / NO
+
+CURRENT MONTH DEFAULT:
+PASS / FAIL
+
+PATRIMÔNIO SOURCE:
+[...]
+
+PATRIMÔNIO VALUE LOADED:
+YES / NO
+
+LIQUIDEZ SOURCE:
+[...]
+
+LIQUIDEZ VALUE LOADED:
+YES / NO
+
+BRL ORIGINAL VALUE LOADED:
+YES / NO
+
+EUR ORIGINAL VALUE LOADED:
+YES / NO
+
+CHF ORIGINAL VALUE LOADED:
+YES / NO
+
+INVESTMENT DATA SOURCE:
+[...]
+
+INVESTMENT GROUP BRASIL:
+PASS / FAIL
+
+INVESTMENT GROUP EUROPA:
+PASS / FAIL
+
+INVESTMENT GROUP SUÍÇA:
+PASS / FAIL
+
+INVESTMENT DUPLICATES:
+NONE / [...]
+
+TRANSACTION DUPLICATES:
+NONE / [...]
+
+CATEGORY IDS MODIFIED:
+NO
+
+CATEGORY NAMES MODIFIED:
+NO
+
+CATEGORY DUPLICATES CREATED:
+NONE
+
+CATEGORY DATA MODIFIED:
+NO
+
+HUMAN OVERRIDES PRESERVED:
+YES / NO
+
+LUNCH MONEY PRESERVED:
+YES / NO
+
+AUTH PRESERVED:
+YES / NO
+
+FX ENGINE PRESERVED:
+YES / NO
+
+DATABASE SCHEMA MODIFIED:
+NO
+
+MIGRATION CREATED:
+NO
+
+FINANCIAL SOURCE DATA MODIFIED:
+NO
+
+HARDCODED FINANCIAL VALUES ADDED:
+NO
+
+FUNCTIONALITY REMOVED:
+NONE
+
+EXISTING FUNCTIONALITY BROKEN:
+NONE
+
+MONTAGEM AUTOMATION CREATED:
+NO
+
+MONTAGEM CRON CREATED:
+NO
+
+MONTAGEM LISTENER CREATED:
+NO
+
+CLV INVENTED:
+NO
+
+lint:
+PASS / FAIL
+
+tests:
+PASS / FAIL
+
+build:
+PASS / FAIL
+
+git diff --check:
+PASS / FAIL
+
+SAFE TO ACCEPT CHANGES:
+YES / NO
+
+==================================================
+30. PARADA OBRIGATÓRIA
+==================================================
+
+Quando terminar:
+
+PARE.
+
+NÃO COMMIT.
+NÃO PUSH.
+NÃO DEPLOY.
+
+Mostre o relatório e aguarde aprovação humana.
+
+A aprovação só será dada se:
+- dados reais voltarem;
+- design premium voltar;
+- investimentos voltarem;
+- multi-moeda funcionar;
+- categorias permanecerem intactas;
+- funcionalidades permanecerem intactas;
+- build e testes passarem.
+
+NÃO TENTE "MELHORAR MAIS" ALÉM DESTE ESCOPO.
+
+A prioridade é recuperar exatamente o sistema premium funcional que existia antes do rollback e deixá-lo estável para entrega.
