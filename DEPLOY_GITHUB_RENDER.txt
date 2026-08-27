@@ -1,0 +1,45 @@
+GESTÃO FINANCEIRA KÁSSIO — DEPLOY FINAL
+
+1. Descompacte o ZIP final.
+2. Abra o repositório do GitHub que já está ligado ao Render.
+3. Add file > Upload files.
+4. Envie TODO o conteúdo desta pasta (package.json precisa ficar na raiz do repositório).
+5. Faça commit na branch atualmente ligada ao Render.
+   Sugestão de mensagem:
+   feat: finalize canonical finance sync categorization and ai
+6. No Render, abra o MESMO Web Service atual.
+7. Confirme que as Environment Variables existentes foram preservadas.
+8. Garanta, no mínimo, as variáveis já usadas pelo seu ambiente:
+   SESSION_SECRET
+   CONSULTANT_PASSWORD
+   CLIENT_PASSWORD
+   LUNCH_MONEY_API_KEY
+   FIREBASE_SERVICE_ACCOUNT_JSON ou GOOGLE_APPLICATION_CREDENTIALS
+9. Para OpenAI opcional:
+   AI_PROVIDER=OPENAI
+   OPENAI_API_KEY=<sua chave no Render>
+   OPENAI_MODEL=gpt-5
+   Não coloque chave em arquivo .env no GitHub.
+10. Manual Deploy > Deploy latest commit.
+11. Confira o log do Render. O deploy deve executar os scripts atuais do package.json:
+    npm install/ci (feito pela plataforma conforme configuração)
+    npm run build
+    npm start
+12. Teste após ficar Live:
+    - login CONSULTANT
+    - login CLIENT
+    - Atualizar Money nos dois perfis
+    - receitas/despesas do mês
+    - Sem categoria
+    - Planejamento
+    - Relatórios
+    - Investimentos / Patrimônio
+    - categorização manual persistindo após refresh
+
+ROLLBACK
+Se o Render falhar ou ocorrer regressão, use o deploy/commit anterior que estava estável. Não apague banco nem Environment Variables.
+
+IMPORTANTE
+- Este pacote NÃO contém .env real, senhas, tokens ou service account.
+- node_modules e dist não fazem parte do ZIP.
+- O arquivo antigo "apuratto 2.zip" não é necessário para o deploy desta versão final.

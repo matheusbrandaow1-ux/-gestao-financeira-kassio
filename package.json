@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx scripts/regression_financial.ts && tsx scripts/http_regression.ts"
+    "test": "tsx scripts/canonical_finance_regression.ts && tsx scripts/regression_financial.ts && tsx scripts/http_regression.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 131 40" width="131" height="40">
+  <rect x="1" y="1" width="129" height="38" rx="9" fill="#1C1826" stroke="#322C42" stroke-width="1.5"/>
+  <g transform="translate(15,9.5)"><g fill="none" stroke="#9B7FDB" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M 5 16 L 6.2 12.2 L 13.6 4.8 A 1.6 1.6 0 0 1 15.9 7.1 L 8.5 14.5 Z"/><path d="M 6.2 12.2 L 8.5 14.5"/></g></g>
+  <text x="44" y="25" font-family="'Spline Sans Mono', monospace" font-size="13" letter-spacing="2.4" fill="#F0EDE4">MANUAL</text>
+</svg>
